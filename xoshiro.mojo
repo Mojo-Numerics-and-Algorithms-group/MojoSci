@@ -1,5 +1,6 @@
 # Copyright Timothy H. Keitt 2024
 # Adapted from https://prng.di.unimi.it/
+# https://github.com/keittlab/numojo
 
 alias SplitMixState = UInt64
 
