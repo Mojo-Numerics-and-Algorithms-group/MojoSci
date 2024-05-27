@@ -18,12 +18,21 @@ struct SplitMix:
         self.seed = seed
         self.state = seed
 
+    fn reset(inout self):
+        self.state = self.seed
+
+    fn set_seed(inout self, seed: UInt64):
+        self.seed = seed
+        self.reset()
+
     fn get_seed(self) -> UInt64:
         return self.seed
 
+    @always_inline
     fn step(inout self: SplitMix):
         self.state += 0x9E3779B97F4A7C15
 
+    @always_inline
     fn next(inout self: SplitMix) -> UInt64:
         self.step()
         var z = self.state
@@ -31,38 +40,61 @@ struct SplitMix:
         z = (z ^ (z >> 27)) * 0x94D049BB133111EB
         return z ^ (z >> 31)
 
-    fn reset(inout self: SplitMix):
-        self.state = self.seed
-
-    fn fill[k: Int](inout self: SplitMix, inout other: SIMD[DType.uint64, k]):
+    fn fill[k: Int](inout self, inout other: SIMD[DType.uint64, k]):
         for i in range(k):
             other[i] = self.next()
 
 
+@always_inline
 fn rotate_left[k: UInt64](x: UInt64) -> UInt64:
     constrained[k < 64, "Invalid rotation"]()
     return x << k | x >> 64 - k
 
 
-struct Xoshiro256Engine:
-    var state: SIMD[DType.uint64, 4]
+alias Xoshiro256State = SIMD[DType.uint64, 4]
+
+
+@always_inline
+fn xoshiro256_plus(state: Xoshiro256State) -> UInt64:
+    return state[0] + state[3]
+
+
+@always_inline
+fn xoshiro256_plus_plus(state: Xoshiro256State) -> UInt64:
+    return rotate_left[23](state[0] + state[3]) + state[0]
+
+
+@always_inline
+fn xoshiro256_star_star(state: Xoshiro256State) -> UInt64:
+    return rotate_left[7](state[1] * 5) * 9
+
+
+struct Xoshiro256[scrambler: fn (Xoshiro256State) -> UInt64]:
+    var state: Xoshiro256State
     var seed: UInt64
 
     fn __init__(inout self):
         self.state = 0
         self.seed = now()
-        var seedr = SplitMix(self.seed)
-        seedr.fill(self.state)
+        self.reset()
 
     fn __init__(inout self, seed: UInt64):
         self.state = 0
         self.seed = seed
-        var seedr = SplitMix(seed)
+        self.reset()
+
+    fn reset(inout self):
+        var seedr = SplitMix(self.seed)
         seedr.fill(self.state)
+
+    fn set_seed(inout self, seed: UInt64):
+        self.seed = seed
+        self.reset()
 
     fn get_seed(self) -> UInt64:
         return self.seed
 
+    @always_inline
     fn step(inout self):
         var t = self.state[1] << 17
         self.state[2] ^= self.state[0]
@@ -72,9 +104,15 @@ struct Xoshiro256Engine:
         self.state[2] ^= t
         self.state[3] = rotate_left[45](self.state[3])
 
+    @always_inline
+    fn next(inout self) -> UInt64:
+        var res = scrambler(self.state)
+        self.step()
+        return res
+
     fn jump(inout self):
-        var res: SIMD[DType.uint64, 4] = 0
-        var coefs = SIMD[DType.uint64, 4](
+        var res: Xoshiro256State = 0
+        var coefs = Xoshiro256State(
             0x180EC6D33CFD0ABA,
             0xD5A61266F0C9392C,
             0xA9582618E03FC9AA,
@@ -88,8 +126,8 @@ struct Xoshiro256Engine:
         self.state = res
 
     fn long_jump(inout self):
-        var res: SIMD[DType.uint64, 4] = 0
-        var coefs = SIMD[DType.uint64, 4](
+        var res: Xoshiro256State = 0
+        var coefs = Xoshiro256State(
             0x76E15D3EFEFDCBBF,
             0xC5004E441C522FB3,
             0x77710069854EE241,
@@ -102,132 +140,55 @@ struct Xoshiro256Engine:
                 self.step()
         self.state = res
 
-    fn scramble_plus(self) -> UInt64:
-        return self.state[0] + self.state[3]
 
-    fn scramble_plus_plus(self) -> UInt64:
-        return rotate_left[23](self.scramble_plus()) + self.state[0]
+alias Xoshiro256p = Xoshiro256[xoshiro256_plus]
+alias Xoshiro256pp = Xoshiro256[xoshiro256_plus_plus]
+alias Xoshiro256ss = Xoshiro256[xoshiro256_star_star]
 
-    fn scramble_star(self) -> UInt64:
-        return self.state[1] * 5
-
-    fn scramble_star_star(self) -> UInt64:
-        return rotate_left[7](self.scramble_star()) * 9
-
-    fn reset(inout self):
-        var seedr = SplitMix(self.seed)
-        seedr.fill(self.state)
+alias Xoshiro128State = SIMD[DType.uint64, 2]
 
 
-struct Xoshiro256p:
-    var eng: Xoshiro256Engine
-
-    fn __init__(inout self):
-        self.eng = Xoshiro256Engine()
-
-    fn __init__(inout self, seed: UInt64):
-        self.eng = Xoshiro256Engine(seed)
-
-    fn get_seed(self) -> UInt64:
-        return self.eng.get_seed()
-
-    fn step(inout self):
-        self.eng.step()
-
-    fn jump(inout self):
-        self.eng.jump()
-
-    fn long_jump(inout self):
-        self.eng.long_jump()
-
-    fn next(inout self) -> UInt64:
-        var res = self.eng.scramble_plus()
-        self.eng.step()
-        return res
-
-    fn reset(inout self):
-        self.eng.reset()
+@always_inline
+fn xoshiro128_plus(state: Xoshiro128State) -> UInt64:
+    return state[0] + state[1]
 
 
-struct Xoshiro256pp:
-    var eng: Xoshiro256Engine
-
-    fn __init__(inout self):
-        self.eng = Xoshiro256Engine()
-
-    fn __init__(inout self, seed: UInt64):
-        self.eng = Xoshiro256Engine(seed)
-
-    fn get_seed(self) -> UInt64:
-        return self.eng.get_seed()
-
-    fn step(inout self):
-        self.eng.step()
-
-    fn jump(inout self):
-        self.eng.jump()
-
-    fn long_jump(inout self):
-        self.eng.long_jump()
-
-    fn next(inout self) -> UInt64:
-        var res = self.eng.scramble_plus_plus()
-        self.eng.step()
-        return res
-
-    fn reset(inout self):
-        self.eng.reset()
+@always_inline
+fn xoshiro128_plus_plus(state: Xoshiro128State) -> UInt64:
+    return rotate_left[17](state[0] + state[1]) + state[0]
 
 
-struct Xoshiro256ss:
-    var eng: Xoshiro256Engine
-
-    fn __init__(inout self):
-        self.eng = Xoshiro256Engine()
-
-    fn __init__(inout self, seed: UInt64):
-        self.eng = Xoshiro256Engine(seed)
-
-    fn get_seed(self) -> UInt64:
-        return self.eng.get_seed()
-
-    fn step(inout self):
-        self.eng.step()
-
-    fn jump(inout self):
-        self.eng.jump()
-
-    fn long_jump(inout self):
-        self.eng.long_jump()
-
-    fn next(inout self) -> UInt64:
-        var res = self.eng.scramble_star_star()
-        self.eng.step()
-        return res
-
-    fn reset(inout self):
-        self.eng.reset()
+@always_inline
+fn xoshiro128_star_star(state: Xoshiro128State) -> UInt64:
+    return rotate_left[7](state[1] * 5) * 9
 
 
-struct Xoshiro128Engine:
-    var state: SIMD[DType.uint64, 2]
+struct Xoshiro128[scrambler: fn (Xoshiro128State) -> UInt64]:
+    var state: Xoshiro128State
     var seed: UInt64
 
     fn __init__(inout self):
         self.state = 0
         self.seed = now()
-        var seedr = SplitMix(self.seed)
-        seedr.fill(self.state)
+        self.reset()
 
     fn __init__(inout self, seed: UInt64):
         self.state = 0
         self.seed = seed
-        var seedr = SplitMix(seed)
+        self.reset()
+
+    fn reset(inout self):
+        var seedr = SplitMix(self.seed)
         seedr.fill(self.state)
+
+    fn set_seed(inout self, seed: UInt64):
+        self.seed = seed
+        self.reset()
 
     fn get_seed(self) -> UInt64:
         return self.seed
 
+    @always_inline
     fn step(inout self):
         self.state[1] ^= self.state[0]
         self.state[0] = (
@@ -237,11 +198,15 @@ struct Xoshiro128Engine:
         )
         self.state[1] = rotate_left[37](self.state[1])
 
+    @always_inline
+    fn next(inout self) -> UInt64:
+        var res = scrambler(self.state)
+        self.step()
+        return res
+
     fn jump(inout self):
-        var res: SIMD[DType.uint64, 2] = 0
-        var coefs = SIMD[DType.uint64, 2](
-            0xDF900294D8F554A5, 0x170865DF4B3201FC
-        )
+        var res: Xoshiro128State = 0
+        var coefs = Xoshiro128State(0xDF900294D8F554A5, 0x170865DF4B3201FC)
         for i in range(2):
             for j in range(64):
                 if coefs[i] & (1 << j):
@@ -250,10 +215,8 @@ struct Xoshiro128Engine:
         self.state = res
 
     fn long_jump(inout self):
-        var res: SIMD[DType.uint64, 2] = 0
-        var coefs = SIMD[DType.uint64, 2](
-            0xD2A98B26625EEE7B, 0xDDDF9B1090AA7AC1
-        )
+        var res: Xoshiro128State = 0
+        var coefs = Xoshiro128State(0xD2A98B26625EEE7B, 0xDDDF9B1090AA7AC1)
         for i in range(2):
             for j in range(64):
                 if coefs[i] & (1 << j):
@@ -261,108 +224,7 @@ struct Xoshiro128Engine:
                 self.step()
         self.state = res
 
-    fn scramble_plus(self) -> UInt64:
-        return self.state[0] + self.state[1]
 
-    fn scramble_plus_plus(self) -> UInt64:
-        return rotate_left[17](self.scramble_plus()) + self.state[0]
-
-    fn scramble_star(self) -> UInt64:
-        return self.state[1] * 5
-
-    fn scramble_star_star(self) -> UInt64:
-        return rotate_left[7](self.scramble_star()) * 9
-
-    fn reset(inout self):
-        var seedr = SplitMix(self.seed)
-        seedr.fill(self.state)
-
-
-struct Xoshiro128p:
-    var eng: Xoshiro128Engine
-
-    fn __init__(inout self):
-        self.eng = Xoshiro128Engine()
-
-    fn __init__(inout self, seed: UInt64):
-        self.eng = Xoshiro128Engine(seed)
-
-    fn get_seed(self) -> UInt64:
-        return self.eng.get_seed()
-
-    fn step(inout self):
-        self.eng.step()
-
-    fn jump(inout self):
-        self.eng.jump()
-
-    fn long_jump(inout self):
-        self.eng.long_jump()
-
-    fn next(inout self) -> UInt64:
-        var res = self.eng.scramble_plus()
-        self.eng.step()
-        return res
-
-    fn reset(inout self):
-        self.eng.reset()
-
-
-struct Xoshiro128pp:
-    var eng: Xoshiro128Engine
-
-    fn __init__(inout self):
-        self.eng = Xoshiro128Engine()
-
-    fn __init__(inout self, seed: UInt64):
-        self.eng = Xoshiro128Engine(seed)
-
-    fn get_seed(self) -> UInt64:
-        return self.eng.get_seed()
-
-    fn step(inout self):
-        self.eng.step()
-
-    fn jump(inout self):
-        self.eng.jump()
-
-    fn long_jump(inout self):
-        self.eng.long_jump()
-
-    fn next(inout self) -> UInt64:
-        var res = self.eng.scramble_plus_plus()
-        self.eng.step()
-        return res
-
-    fn reset(inout self):
-        self.eng.reset()
-
-
-struct Xoshiro128ss:
-    var eng: Xoshiro128Engine
-
-    fn __init__(inout self):
-        self.eng = Xoshiro128Engine()
-
-    fn __init__(inout self, seed: UInt64):
-        self.eng = Xoshiro128Engine(seed)
-
-    fn get_seed(self) -> UInt64:
-        return self.eng.get_seed()
-
-    fn step(inout self):
-        self.eng.step()
-
-    fn jump(inout self):
-        self.eng.jump()
-
-    fn long_jump(inout self):
-        self.eng.long_jump()
-
-    fn next(inout self) -> UInt64:
-        var res = self.eng.scramble_star_star()
-        self.eng.step()
-        return res
-
-    fn reset(inout self):
-        self.eng.reset()
+alias Xoshiro129p = Xoshiro128[xoshiro128_plus]
+alias Xoshiro128pp = Xoshiro128[xoshiro128_plus_plus]
+alias Xoshiro128ss = Xoshiro128[xoshiro128_star_star]
