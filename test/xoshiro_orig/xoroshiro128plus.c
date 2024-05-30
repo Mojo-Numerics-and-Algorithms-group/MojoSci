@@ -32,7 +32,6 @@ worldwide. This software is distributed without any warranty.
 See <http://creativecommons.org/publicdomain/zero/1.0/>. */
 
 #include <stdint.h>
-#include <stdio.h>
 
 /* This is xoroshiro128+ 1.0, our best and fastest small-state generator
    for floating-point numbers, but its state space is large enough only
@@ -123,18 +122,18 @@ void long_jump(void) {
 	s[1] = s1;
 }
 
+
+/* Test code THK */
+#include <stdio.h>
+
 int main() {
 	x = 123456789;
-	next_x();
-	s[0] = x;
-	next_x();
-	s[1] = x;
-	next();
-	next();
-	printf("%llx\n", next());
+	s[0] = next_x();
+	s[1] = next_x();
+	printf("%llu\n", next());
 	jump();
-	printf("%llx\n", next());
+	printf("%llu\n", next());
 	long_jump();
-	printf("%llx\n", next());
+	printf("%llu\n", next());
 	return 0;
 }

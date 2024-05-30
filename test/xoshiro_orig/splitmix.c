@@ -7,7 +7,6 @@ worldwide. This software is distributed without any warranty.
 See <http://creativecommons.org/publicdomain/zero/1.0/>. */
 
 #include <stdint.h>
-#include <stdio.h>
 
 /* This is a fixed-increment version of Java 8's SplittableRandom generator
    See http://dx.doi.org/10.1145/2714064.2660195 and 
@@ -25,12 +24,13 @@ uint64_t next() {
 	return z ^ (z >> 31);
 }
 
+/* Test code THK */
+
+#include <stdio.h>
+
 int main() {
     x = 123456789;
-    next();
-    printf("%llx\n", x);
-    next();
-    printf("%llx\n", x);
-    next();
-    printf("%llx\n", x);
+    printf("%llu\n", next());
+    printf("%llu\n", next());
+    printf("%llu\n", next());
 }

@@ -4,7 +4,8 @@
 
 
 from time import now
-from numojo.rand_utils import *
+from numojo.utils import rotate_left
+from numojo.splitmix import SplitMix
 
 
 alias Xoshiro256State = SIMD[DType.uint64, 4]
@@ -110,6 +111,6 @@ struct Xoshiro256[scrambler: fn (Xoshiro256State) -> UInt64]:
         self.state = res
 
 
-alias Xoshiro256p = Xoshiro256[xoshiro256_plus]
-alias Xoshiro256pp = Xoshiro256[xoshiro256_plus_plus]
-alias Xoshiro256ss = Xoshiro256[xoshiro256_star_star]
+alias Xoshiro256plus = Xoshiro256[xoshiro256_plus]
+alias Xoshiro256plusplus = Xoshiro256[xoshiro256_plus_plus]
+alias Xoshiro256starstar = Xoshiro256[xoshiro256_star_star]

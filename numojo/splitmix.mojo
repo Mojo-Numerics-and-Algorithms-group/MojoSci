@@ -4,10 +4,12 @@
 
 
 from time import now
+from numojo.utils import rotate_left
 
 
 struct SplitMix:
     """SplitMix 64-bit pseudo-random generator."""
+
     var seed: UInt64
     var state: UInt64
 
@@ -35,12 +37,12 @@ struct SplitMix:
         return self.seed
 
     @always_inline
-    fn step(inout self: SplitMix):
+    fn step(inout self):
         """Advance the generator by one step."""
         self.state += 0x9E3779B97F4A7C15
 
     @always_inline
-    fn next(inout self: SplitMix) -> UInt64:
+    fn next(inout self) -> UInt64:
         """Return the next value in the sequence."""
         self.step()
         var z = self.state
@@ -52,10 +54,3 @@ struct SplitMix:
         """Fill a SIMD with pseudo-random numbers."""
         for i in range(k):
             other[i] = self.next()
-
-
-@always_inline
-fn rotate_left[k: UInt64](x: UInt64) -> UInt64:
-    """Performs bitwise rotation of a 64-bit integer."""
-    constrained[k < 64, "Invalid rotation"]()
-    return x << k | x >> 64 - k
