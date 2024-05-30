@@ -3,10 +3,11 @@ Numerics for Mojo
 
 ## Random number generators
 
-I ported some of the xo(ro)shiro family of random number generators to Mojo. I use these in my research (especially Xoshiro256pp) as they are fast and have good statistical properties. You can read about these generators (here)[https://prng.di.unimi.it/].
+I ported some of the xo(ro)shiro family of random number generators to Mojo. I use these in my research (especially Xoshiro256pp) as they are fast and have good statistical properties. You can read about these generators [here](https://prng.di.unimi.it/).
 
 Here is the output from running the bench script.
 
+```
 Benchmarking 1e6 calls to random_ui64
 ---------------------
 Benchmark Report (ms)
@@ -159,6 +160,7 @@ Warmup Total: 18.119
 Warmup Iters: 2
 Fastest Mean: 9.0551401515151522
 Slowest Mean: 9.0551401515151522
+```
 
 It is not an especially fair comparison between the Mojo library and these generators as the library functions scale the output. Nonetheless, these generators appear to be about 3x faster than the one used by Mojo. Note that the generator in the standard library is not documented and is part of a currently closed-source runtime component.
 
