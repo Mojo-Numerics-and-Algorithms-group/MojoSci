@@ -139,7 +139,7 @@ fn bench_xoshiro256starstar() -> Report:
 
 fn main():
     print("| Library  | Function    | Time (ns) |")
-    print("| ======== | =========== | ========= |")
+    print("| -------- | ----------- | --------- |")
     print("| Standard | random_ui64 |", bench_rand_si64().mean("ns") / 1e6, "|")
     print("| Standard | random_si64 |", bench_rand_si64().mean("ns") / 1e6, "|")
     print(

@@ -4,7 +4,6 @@
 
 
 from time import now
-from numojo.utils import rotate_left
 
 
 struct SplitMix:

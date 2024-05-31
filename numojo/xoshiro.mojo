@@ -4,7 +4,7 @@
 
 
 from time import now
-from numojo.utils import rotate_left
+from math import rotate_bits_left
 from numojo.splitmix import SplitMix
 
 
@@ -20,13 +20,13 @@ fn xoshiro256_plus(state: Xoshiro256State) -> UInt64:
 @always_inline
 fn xoshiro256_plus_plus(state: Xoshiro256State) -> UInt64:
     """Scrambler for xoshiro plus-plus generator with 256-bits of state."""
-    return rotate_left[23](state[0] + state[3]) + state[0]
+    return rotate_bits_left[23](state[0] + state[3]) + state[0]
 
 
 @always_inline
 fn xoshiro256_star_star(state: Xoshiro256State) -> UInt64:
      """Scrambler for xoshiro star-star generator with 256-bits of state."""
-    return rotate_left[7](state[1] * 5) * 9
+    return rotate_bits_left[7](state[1] * 5) * 9
 
 
 struct Xoshiro256[scrambler: fn (Xoshiro256State) -> UInt64]:
@@ -69,7 +69,7 @@ struct Xoshiro256[scrambler: fn (Xoshiro256State) -> UInt64]:
         self.state[1] ^= self.state[2]
         self.state[0] ^= self.state[3]
         self.state[2] ^= t
-        self.state[3] = rotate_left[45](self.state[3])
+        self.state[3] = rotate_bits_left[45](self.state[3])
 
     @always_inline
     fn next(inout self) -> UInt64:

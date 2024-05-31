@@ -4,7 +4,7 @@
 
 
 from time import now
-from numojo.utils import rotate_left
+from math import rotate_bits_left
 from numojo.splitmix import SplitMix
 
 
@@ -48,11 +48,11 @@ struct Xoroshiro128plus:
         """Advance the generator by one step."""
         self.state[1] ^= self.state[0]
         self.state[0] = (
-            rotate_left[24](self.state[0])
+            rotate_bits_left[24](self.state[0])
             ^ self.state[1]
             ^ (self.state[1] << 16)
         )
-        self.state[1] = rotate_left[37](self.state[1])
+        self.state[1] = rotate_bits_left[37](self.state[1])
 
     @always_inline
     fn next(inout self) -> UInt64:
@@ -121,16 +121,18 @@ struct Xoroshiro128plusplus:
         """Advance the generator by one step."""
         self.state[1] ^= self.state[0]
         self.state[0] = (
-            rotate_left[49](self.state[0])
+            rotate_bits_left[49](self.state[0])
             ^ self.state[1]
             ^ (self.state[1] << 21)
         )
-        self.state[1] = rotate_left[28](self.state[1])
+        self.state[1] = rotate_bits_left[28](self.state[1])
 
     @always_inline
     fn next(inout self) -> UInt64:
         """Return the next value in the sequence."""
-        var res = rotate_left[17](self.state[0] + self.state[1]) + self.state[0]
+        var res = rotate_bits_left[17](
+            self.state[0] + self.state[1]
+        ) + self.state[0]
         self.step()
         return res
 
@@ -194,16 +196,16 @@ struct Xoroshiro128starstar:
         """Advance the generator by one step."""
         self.state[1] ^= self.state[0]
         self.state[0] = (
-            rotate_left[24](self.state[0])
+            rotate_bits_left[24](self.state[0])
             ^ self.state[1]
             ^ (self.state[1] << 16)
         )
-        self.state[1] = rotate_left[37](self.state[1])
+        self.state[1] = rotate_bits_left[37](self.state[1])
 
     @always_inline
     fn next(inout self) -> UInt64:
         """Return the next value in the sequence."""
-        var res = rotate_left[7](self.state[0] * 5) * 9
+        var res = rotate_bits_left[7](self.state[0] * 5) * 9
         self.step()
         return res
 
