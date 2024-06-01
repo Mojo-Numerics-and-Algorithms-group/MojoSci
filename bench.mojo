@@ -169,17 +169,17 @@ fn main():
         "|",
     )
     print(
-        "| Numojo | xoroshiro256p |",
+        "| Numojo | xoshiro256p |",
         bench_xoshiro256plus().mean("ns") / 1e6,
         "|",
     )
     print(
-        "| Numojo | xoroshiro256pp |",
+        "| Numojo | xoshiro256pp |",
         bench_xoshiro256plusplus().mean("ns") / 1e6,
         "|",
     )
     print(
-        "| Numojo | xoroshiro256ss |",
+        "| Numojo | xoshiro256ss |",
         bench_xoshiro256starstar().mean("ns") / 1e6,
         "|",
     )

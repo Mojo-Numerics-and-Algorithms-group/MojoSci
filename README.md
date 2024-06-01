@@ -17,9 +17,9 @@ Here is the output (slightly edited) from running the bench script.
 | Numojo | xoroshiro128p | 4.3 |
 | Numojo | xoroshiro128pp | 4.5 |
 | Numojo | xoroshiro128ss | 4.8 |
-| Numojo | xoroshiro256p | 5.1 |
-| Numojo | xoroshiro256pp | 5.1 |
-| Numojo | xoroshiro256ss | 5.1 |
+| Numojo | xoshiro256p | 5.1 |
+| Numojo | xoshiro256pp | 5.1 |
+| Numojo | xoshiro256ss | 5.1 |
 
 It is not an especially fair comparison between the Mojo library and these generators as the library functions scale the output. Nonetheless, these generators appear to be about 3x faster than the one used by Mojo. Note that the generator in the standard library is not documented and is part of a currently closed-source runtime component.
 
