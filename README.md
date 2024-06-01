@@ -9,17 +9,17 @@ Here is the output (slightly edited) from running the bench script.
 
 | Library  | Function    | Time (ns) |
 | -------- | ----------- | --------- |
-| Standard | random_ui64 | 33.4 |
-| Standard | random_si64 | 33.3 |
-| Standard | random_float64 | 16.2 |
-| Standard | randn_float64 | 59.6 |
-| Numojo | splitmix | 1.3 |
-| Numojo | xoroshiro128p | 7.7 |
-| Numojo | xoroshiro128pp | 7.7 |
-| Numojo | xoroshiro128ss | 7.7 |
-| Numojo | xoshiro256p | 8.7 |
-| Numojo | xoshiro256pp | 8.7 |
-| Numojo | xoshiro256ss | 8.7 |
+| Standard | random_ui64 | 18.9 |
+| Standard | random_si64 | 18.9 |
+| Standard | random_float64 | 9.1 |
+| Standard | randn_float64 | 33.6 |
+| Numojo | splitmix | 0.73 |
+| Numojo | xoroshiro128p | 4.3 |
+| Numojo | xoroshiro128pp | 4.5 |
+| Numojo | xoroshiro128ss | 4.8 |
+| Numojo | xoroshiro256p | 5.1 |
+| Numojo | xoroshiro256pp | 5.1 |
+| Numojo | xoroshiro256ss | 5.1 |
 
 It is not an especially fair comparison between the Mojo library and these generators as the library functions scale the output. Nonetheless, these generators appear to be about 3x faster than the one used by Mojo. Note that the generator in the standard library is not documented and is part of a currently closed-source runtime component.
 

@@ -12,7 +12,7 @@ fn bench_rand_ui64() -> Report:
         var x: UInt64 = 0
         for i in range(1e6):
             x = random_ui64(0, 1e9)
-        keep(x)
+            keep(x)
 
     return run[doit]()
 
@@ -24,7 +24,7 @@ fn bench_rand_si64() -> Report:
         var x: Int64 = 0
         for i in range(1e6):
             x = random_si64(0, 1e9)
-        keep(x)
+            keep(x)
 
     return run[doit]()
 
@@ -36,7 +36,7 @@ fn bench_random_float64() -> Report:
         var x: Float64 = 0
         for i in range(1e6):
             x = random_float64()
-        keep(x)
+            keep(x)
 
     return run[doit]()
 
@@ -48,7 +48,7 @@ fn bench_randn_float64() -> Report:
         var x: Float64 = 0
         for i in range(1e6):
             x = randn_float64()
-        keep(x)
+            keep(x)
 
     return run[doit]()
 
@@ -60,7 +60,7 @@ fn bench_splitmix() -> Report:
         var x: UInt64 = 0
         for i in range(1e6):
             x = rng.next()
-        keep(x)
+            keep(x)
 
     return run[doit]()
 
@@ -72,7 +72,7 @@ fn bench_xoroshiro128plus() -> Report:
         var x: UInt64 = 0
         for i in range(1e6):
             x = rng.next()
-        keep(x)
+            keep(x)
 
     return run[doit]()
 
@@ -84,7 +84,7 @@ fn bench_xoroshiro128plusplus() -> Report:
         var x: UInt64 = 0
         for i in range(1e6):
             x = rng.next()
-        keep(x)
+            keep(x)
 
     return run[doit]()
 
@@ -96,7 +96,7 @@ fn bench_xoroshiro128starstar() -> Report:
         var x: UInt64 = 0
         for i in range(1e6):
             x = rng.next()
-        keep(x)
+            keep(x)
 
     return run[doit]()
 
@@ -108,7 +108,7 @@ fn bench_xoshiro256plus() -> Report:
         var x: UInt64 = 0
         for i in range(1e6):
             x = rng.next()
-        keep(x)
+            keep(x)
 
     return run[doit]()
 
@@ -120,7 +120,7 @@ fn bench_xoshiro256plusplus() -> Report:
         var x: UInt64 = 0
         for i in range(1e6):
             x = rng.next()
-        keep(x)
+            keep(x)
 
     return run[doit]()
 
@@ -132,7 +132,7 @@ fn bench_xoshiro256starstar() -> Report:
         var x: UInt64 = 0
         for i in range(1e6):
             x = rng.next()
-        keep(x)
+            keep(x)
 
     return run[doit]()
 
@@ -152,7 +152,7 @@ fn main():
         bench_randn_float64().mean("ns") / 1e6,
         "|",
     )
-    print("| Numojo | splitmix |", bench_splitmix().mean("ns"), "|")
+    print("| Numojo | splitmix |", bench_splitmix().mean("ns") / 1e6, "|")
     print(
         "| Numojo | xoroshiro128p |",
         bench_xoroshiro128plus().mean("ns") / 1e6,
