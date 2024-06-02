@@ -4,13 +4,14 @@
 
 
 from time import now
-from math import rotate_bits_left
+from bit import rotate_bits_left
 from numojo.splitmix import SplitMix
 
 
 alias Xoroshiro128State = SIMD[DType.uint64, 2]
 
 
+@register_passable("trivial")
 struct Xoroshiro128plus:
     """Xoroshiro128plus generator."""
 

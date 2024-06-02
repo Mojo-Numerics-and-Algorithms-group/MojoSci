@@ -6,6 +6,7 @@
 from time import now
 
 
+@register_passable("trivial")
 struct SplitMix:
     """SplitMix 64-bit pseudo-random generator."""
 
