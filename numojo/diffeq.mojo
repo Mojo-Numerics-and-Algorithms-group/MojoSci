@@ -225,7 +225,7 @@ fn euler_integrate(
     ](steps, dt, init_value, diff, pars, t0)
 
 
-fn inverse_euler_integrate(
+fn reverse_euler_integrate(
     steps: Int,
     dt: Float64,
     init_value: Float64,

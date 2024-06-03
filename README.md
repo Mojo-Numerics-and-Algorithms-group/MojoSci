@@ -23,3 +23,6 @@ Here is the output (slightly edited) from running the bench script.
 
 It is not an especially fair comparison between the Mojo library and these generators as the library functions scale the output. Nonetheless, these generators appear to be about 3x faster than the one used by Mojo. Note that the generator in the standard library is not documented and is part of a currently closed-source runtime component.
 
+## ODE Integration
+
+I added some basic routines for ODE integration. This will need lots of work to generalize.
