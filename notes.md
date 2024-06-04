@@ -14,5 +14,11 @@
 
 * To define [positional-only arguments](https://docs.modular.com/mojo/manual/functions#positional-only-and-keyword-only-arguments), add a slash character (`/`) to the argument list. Any arguments before the `/` are positional-only: they can't be passed as keyword arguments.
 
+## Containers / arrays
+
+[`StaticTuple`](https://docs.modular.com/mojo/stdlib/utils/static_tuple/StaticTuple): A statically sized tuple type which contains elements of homogeneous types.
+
+
+
 
 
