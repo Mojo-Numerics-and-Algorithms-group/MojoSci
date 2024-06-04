@@ -1,4 +1,4 @@
-# numojo
+# numojo (placeholder name for now)
 Numerics for Mojo
 
 ## Random number generators
