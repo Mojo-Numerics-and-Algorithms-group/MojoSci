@@ -16,7 +16,7 @@
 
 ## Containers / arrays
 
-[`StaticTuple`](https://docs.modular.com/mojo/stdlib/utils/static_tuple/StaticTuple): A statically sized tuple type which contains elements of homogeneous types.
+[`StaticTuple`](https://docs.modular.com/mojo/stdlib/utils/static_tuple/StaticTuple): A statically sized tuple type which contains elements of homogeneous types. To use, `from utils import static_tuple`.
 
 
 
