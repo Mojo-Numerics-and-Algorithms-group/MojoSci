@@ -10,5 +10,9 @@
 
 [`@value`](https://docs.modular.com/mojo/manual/decorators/value): decorator on a struct to generate boilerplate lifecycle methods, including the member-wise __init__() constructor, __copyinit__() copy constructor, and __moveinit__() move constructor.
 
+## Function arguments
+
+* To define [positional-only arguments\(https://docs.modular.com/mojo/manual/functions#positional-only-and-keyword-only-arguments), add a slash character (/) to the argument list. Any arguments before the / are positional-only: they can't be passed as keyword arguments.
+
 
 
