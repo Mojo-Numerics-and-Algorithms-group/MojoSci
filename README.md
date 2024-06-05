@@ -26,3 +26,9 @@ It is not an especially fair comparison between the Mojo library and these gener
 ## ODE Integration
 
 I added some basic routines for ODE integration. This will need lots of work to generalize.
+
+## Linear algebra
+
+I started some basic, fixed-sized, stack-allocated vector and matrix types to support multi-dimensional ODE systems. All operations should be inlined and unrolled at compile time. I'll be curious to see if the compiler can optimize away the temporaries. If so, these should be quite fast. 
+
+
