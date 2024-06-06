@@ -11,9 +11,8 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-# Some very basic utilities for learning and to support modeling. I am keeping the
-# code as simple as possible. Return values are 100% value semantics. This may
-# facilitate inlining and elmination of temproaries at compile time.
+
+from utils import StaticTuple
 
 
 @value
@@ -21,55 +20,77 @@
 struct Mat[rows: Int, cols: Int](Sized):
     alias element_type = Float64
     alias storage_size = rows * cols
-    var elements: Pointer[Self.element_type]
+    alias storage_type = StaticTuple[Self.element_type, Self.storage_size]
+    var elements: Self.storage_type
 
     @always_inline
     fn __init__(inout self):
         constrained[
             self.storage_size > 0, "Matrix size must be greater than zero."
         ]()
-        self.elements = stack_allocation[self.storage_size, self.element_type]()
+        self.elements = self.storage_type()
 
     @always_inline
     fn __init__(inout self, fill: self.element_type):
         constrained[
             self.storage_size > 0, "Matrix size must be greater than zero."
         ]()
-        self.elements = stack_allocation[self.storage_size, self.element_type]()
+        self.elements = self.storage_type()
+        self.fill(fill)
 
+    @always_inline
+    fn __init__(inout self, *elems: Self.element_type):
+        self.elements = self.storage_type(elems)
+
+    @always_inline
+    fn __init__(inout self, values: VariadicList[Self.element_type]):
+        self.elements = self.storage_type(values)
+
+    @always_inline
+    fn fill(inout self, value: Self.element_type):
         @parameter
         for i in range(self.storage_size):
-            self.elements[i] = fill
+            self.elements[i] = value
 
-    # TODO: Bounds checking, intable, etc.
+    @always_inline
+    fn set_diag(inout self, value: Self.element_type):
+        alias diag_len = min(rows, cols)
+
+        @parameter
+        for i in range(diag_len):
+            self.elements[self.pos(i, i)] = value
+
+    @staticmethod
+    fn diag(value: Self.element_type = 1) -> Self:
+        var res = Self(0)
+        res.set_diag(value)
+        return res
+
     @always_inline
     fn __getitem__(self, index: Int) raises -> self.element_type:
         if index < 0 or index > self.storage_size:
             raise Error("Index out of bounds")
         return self.elements[index]
 
-    # TODO: Bounds checking, intable, etc.
     @always_inline
     fn __setitem__(inout self, index: Int, value: self.element_type) raises:
         if index < 0 or index > self.storage_size:
             raise Error("Index out of bounds")
         self.elements[index] = value
 
-    # TODO: Bounds checking, intable, etc.
     @always_inline
     fn __getitem__(self, row: Int, col: Int) raises -> self.element_type:
         if row < 0 or row > rows or col < 0 or col > cols:
             raise Error("Index out of bounds")
-        return self.elements[col * rows + row]
+        return self.elements[self.pos(row, col)]
 
-    # TODO: Bounds checking, intable, etc.
     @always_inline
     fn __setitem__(
         inout self, row: Int, col: Int, value: self.element_type
     ) raises:
         if row < 0 or row > rows or col < 0 or col > cols:
             raise Error("Index out of bounds")
-        self.elements[col * rows + row] = value
+        self.elements[self.pos(row, col)] = value
 
     @always_inline
     fn get_col(self, col: Int) raises -> ColVec[rows]:
@@ -79,7 +100,7 @@ struct Mat[rows: Int, cols: Int](Sized):
 
         @parameter
         for i in range(rows):
-            res.elements[i] = self.elements[self.index(i, col)]
+            res.elements[i] = self.elements[self.pos(i, col)]
 
         return res
 
@@ -91,7 +112,7 @@ struct Mat[rows: Int, cols: Int](Sized):
 
         @parameter
         for i in range(cols):
-            res.elements[i] = self.elements[i * cols + row]
+            res.elements[i] = self.elements[self.pos(row, i)]
 
         return res
 
@@ -130,7 +151,7 @@ struct Mat[rows: Int, cols: Int](Sized):
         return res
 
     @always_inline
-    fn index(self, row: Int, col: Int) -> Int:
+    fn pos(self, row: Int, col: Int) -> Int:
         return col * rows + row
 
     @always_inline
@@ -139,16 +160,16 @@ struct Mat[rows: Int, cols: Int](Sized):
         var res = Mat[rows, other.cols](0)
 
         @parameter
-        for i in range(rows):  # == res.rows
+        for i in range(res.rows):
 
             @parameter
-            for j in range(other.cols):  # == res.cols
+            for j in range(res.cols):
 
                 @parameter
-                for k in range(cols):  # == other.rows
-                    res.elements[res.index(i, j)] += (
-                        self.elements[self.index(i, k)]
-                        * other.elements[other.index(k, j)]
+                for k in range(other.rows):
+                    res.elements[res.pos(i, j)] += (
+                        self.elements[self.pos(i, k)]
+                        * other.elements[other.pos(k, j)]
                     )
 
         return res
@@ -252,7 +273,7 @@ struct Mat[rows: Int, cols: Int](Sized):
 
             @parameter
             for j in range(cols):
-                res.elements[res.index(j, i)] = self.elements[self.index(i, j)]
+                res.elements[res.pos(j, i)] = self.elements[self.pos(i, j)]
 
         return res
 
