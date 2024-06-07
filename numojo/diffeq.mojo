@@ -11,34 +11,34 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from collections import List
+from numojo.linalg import Mat, RowVec, ColVec
 
 # Eventually struct, matrix, or tensor type
-alias RK4_Coefs = List[Float64](
+alias RK4_Coefs = Mat[4, 4](
     0, 0, 0, 0, 1 / 2, 0, 0, 0, 0, 1 / 2, 0, 0, 0, 0, 1, 0
 )
-alias RK4_Weights = List[Float64](1 / 6, 1 / 3, 1 / 3, 1 / 6)
-alias RK4_Nodes = List[Float64](0, 1 / 2, 1 / 2, 1)
+alias RK4_Weights = RowVec[4](1 / 6, 1 / 3, 1 / 3, 1 / 6)
+alias RK4_Nodes = RowVec[4](0, 1 / 2, 1 / 2, 1)
 
-alias RK38_Coefs = List[Float64](
+alias RK38_Coefs = Mat[4, 4](
     0, 0, 0, 0, 1 / 3, 0, 0, 0, -1 / 3, 1, 0, 0, 1, -1, 1, 0
 )
-alias RK38_Weights = List[Float64](1 / 8, 3 / 8, 3 / 8, 1 / 8)
-alias RK38_Nodes = List[Float64](0, 1 / 3, 2 / 3, 1)
+alias RK38_Weights = RowVec[4](1 / 8, 3 / 8, 3 / 8, 1 / 8)
+alias RK38_Nodes = RowVec[4](0, 1 / 3, 2 / 3, 1)
 
-alias MidPoint_Coefs = List[Float64](0, 0, 1 / 2, 0)
-alias MidPoint_Weights = List[Float64](0, 1)
-alias MidPoint_Nodes = List[Float64](0, 1 / 2)
+alias MidPoint_Coefs = Mat[2, 2](0, 0, 1 / 2, 0)
+alias MidPoint_Weights = RowVec[2](0, 1)
+alias MidPoint_Nodes = RowVec[2](0, 1 / 2)
 
-alias Heun_Coefs = List[Float64](0, 0, 1, 0)
-alias Heun_Weights = List[Float64](1 / 2, 1 / 2)
-alias Heun_Nodes = List[Float64](0, 1)
+alias Heun_Coefs = Mat[2, 2](0, 0, 1, 0)
+alias Heun_Weights = RowVec[2](1 / 2, 1 / 2)
+alias Heun_Nodes = RowVec[2](0, 1)
 
-alias Ralston_Coefs = List[Float64](0, 0, 2 / 3, 0)
-alias Ralston_Weights = List[Float64](1 / 4, 3 / 4)
-alias Ralston_Nodes = List[Float64](0, 2 / 3)
+alias Ralston_Coefs = Mat[2, 2](0, 0, 2 / 3, 0)
+alias Ralston_Weights = RowVec[2](1 / 4, 3 / 4)
+alias Ralston_Nodes = RowVec[2](0, 2 / 3)
 
-alias Fehlberg45_Coefs = List[Float64](
+alias Fehlberg45_Coefs = Mat[6, 6](
     0,  # 0, 0
     0,  # 0, 1
     0,  # 0, 2
@@ -76,7 +76,7 @@ alias Fehlberg45_Coefs = List[Float64](
     -11 / 40,  # 5, 4
     0,  # 5, 5
 )
-alias Fehlberg4_Weights = List[Float64](
+alias Fehlberg4_Weights = RowVec[6](
     25 / 216,
     0,
     1408 / 2565,
@@ -84,53 +84,28 @@ alias Fehlberg4_Weights = List[Float64](
     -1 / 5,
     0,
 )
-alias Fehlberg5_Weights = List[Float64](
+alias Fehlberg5_Weights = RowVec[6](
     16 / 135, 0, 6656 / 12825, 28561 / 56430, -9 / 50, 2 / 55
 )
-alias Fehlberg45_Nodes = List[Float64](0, 1 / 4, 3 / 8, 12 / 13, 1, 1 / 2)
-
-
-fn zeros[n: Int]() -> List[Float64]:
-    var res = List[Float64](n)
-    for _ in range(n):
-        res.append(0)
-    return res
-
-
-# For now...
-@always_inline
-fn dot_prod[w: List[Float64]](k: List[Float64]) -> Float64:
-    var res: Float64 = 0
-    for i in range(w.size):
-        res += w[i] * k[i]
-    return res
-
-
-@always_inline
-fn dot_prod_row[
-    rows: Int, c: List[Float64]
-](k: List[Float64], row: Int) -> Float64:
-    var res: Float64 = 0
-    for i in range(rows):
-        res += c[i + row * rows] * k[i]
-    return res
+alias Fehlberg45_Nodes = RowVec[6](0, 1 / 4, 3 / 8, 12 / 13, 1, 1 / 2)
 
 
 fn diffeq_steps[
-    coefs: List[Float64],
-    nodes: List[Float64],
+    dim: Int, coefs: Mat[dim, dim], nodes: RowVec[dim], srows: Int, scols: Int
 ](
     t: Float64,
     dt: Float64,
-    s: Float64,
-    diff: fn (Float64, Float64, List[Float64]) -> Float64,
+    s: Mat[srows, scols],
+    diff: fn (Float64, Mat[srows, scols], List[Float64]) -> Float64,
     pars: List[Float64],
-    inout k: List[Float64],
-):
-    for i in range(nodes.size):
-        var node = t + nodes[i] * dt
-        var s_proj = s + dot_prod_row[nodes.size, coefs](k, i)
-        k[i] = diff(node, s_proj, pars)
+    inout k: RowVec[dim],
+) raises:
+    var knots = t + nodes * dt
+
+    @parameter
+    for i in range(len(nodes)):
+        var s_proj = s + (k @ coefs.get_col(i))[0]
+        k[i] = diff(knots[i], s_proj, pars)
 
 
 fn diffeq_integrate[

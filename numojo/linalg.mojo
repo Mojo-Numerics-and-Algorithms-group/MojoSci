@@ -58,7 +58,7 @@ struct Mat[rows: Int, cols: Int](Sized):
 
         @parameter
         for i in range(diag_len):
-            self.elements[self.pos(i, i)] = value
+            self.elements[self.pos[i, i]()] = value
 
     @staticmethod
     fn diag(value: Self.element_type = 1) -> Self:
@@ -105,6 +105,16 @@ struct Mat[rows: Int, cols: Int](Sized):
         return res
 
     @always_inline
+    fn get_col[col: Int](self) -> ColVec[rows]:
+        var res = ColVec[rows]()
+
+        @parameter
+        for row in range(rows):
+            res.set[row, 1](self.get[row, col]())
+
+        return res
+
+    @always_inline
     fn get_row(self, row: Int) raises -> RowVec[cols]:
         if row < 0 or row > rows:
             raise Error("Index out of bounds")
@@ -113,6 +123,16 @@ struct Mat[rows: Int, cols: Int](Sized):
         @parameter
         for i in range(cols):
             res.elements[i] = self.elements[self.pos(row, i)]
+
+        return res
+
+    @always_inline
+    fn get_row[row: Int](self) -> RowVec[cols]:
+        var res = RowVec[cols]()
+
+        @parameter
+        for col in range(cols):
+            res.set[1, col](self.get[row, col]())
 
         return res
 
@@ -167,9 +187,9 @@ struct Mat[rows: Int, cols: Int](Sized):
 
                 @parameter
                 for k in range(other.rows):
-                    res.elements[res.pos(i, j)] += (
-                        self.elements[self.pos(i, k)]
-                        * other.elements[other.pos(k, j)]
+                    res.elements[res.pos[i, j]()] += (
+                        self.elements[self.pos[i, k]()]
+                        * other.elements[other.pos[k, j]()]
                     )
 
         return res
@@ -265,17 +285,102 @@ struct Mat[rows: Int, cols: Int](Sized):
         return res
 
     @always_inline
+    fn pos[row: Int, col: Int](self) -> Int:
+        constrained[row >= 0 and row < rows, "Row index out of bounds"]()
+        constrained[col >= 0 and col < cols, "Col index out of bounds"]()
+        return col * rows + row
+
+    @always_inline
+    fn get[row: Int, col: Int](self) -> Self.element_type:
+        return self.elements[self.pos[row, col]()]
+
+    @always_inline
+    fn set[row: Int, col: Int](inout self, value: Self.element_type):
+        self.elements[self.pos[row, col]()] = value
+
+    @always_inline
+    fn swap_rows[first: Int, second: Int](inout self):
+        @parameter
+        for col in range(cols):
+            var tmp = self.get[first, col]()
+            self.set[first, col](self.get[second, col]())
+            self.set[second, col](tmp)
+
+    @always_inline
+    fn swap_rows(inout self, first: Int, second: Int):
+        @parameter
+        for col in range(cols):
+            swap(
+                self.elements[self.pos(first, col)],
+                self.elements[self.pos(second, col)],
+            )
+
+    @always_inline
+    fn swap_cols[first: Int, second: Int](inout self):
+        @parameter
+        for row in range(rows):
+            var tmp = self.get[row, first]()
+            self.set[row, first](self.get[row, second]())
+            self.set[row, second](tmp)
+
+    @always_inline
+    fn swap_cols(inout self, first: Int, second: Int):
+        @parameter
+        for row in range(rows):
+            swap(
+                self.elements[self.pos(row, first)],
+                self.elements[self.pos(row, second)],
+            )
+
+    @always_inline
     fn transpose(self) -> Mat[cols, rows]:
         var res = Mat[cols, rows]()
 
         @parameter
-        for i in range(rows):
+        for row in range(rows):
 
             @parameter
-            for j in range(cols):
-                res.elements[res.pos(j, i)] = self.elements[self.pos(i, j)]
+            for col in range(cols):
+                res.set[col, row](self.get[row, col]())
 
         return res
+
+    @always_inline
+    fn LU_decompose(self) -> (Mat[rows, rows], Self, Mat[rows, rows]):
+        var L = Mat[rows, rows].diag()
+        var U = self
+        var P = L
+
+        @parameter
+        for k in range(min(rows, cols)):
+            var pivot_row = k
+            var max_value = abs(U.get[k, k]())
+
+            @parameter
+            for i in range(k + 1, rows):
+                if abs(U.get[i, k]()) > max_value:
+                    max_value = abs(U.get[i, k]())
+                    pivot_row = i
+
+            if pivot_row != k:
+                U.swap_rows(k, pivot_row)
+                P.swap_rows(k, pivot_row)
+                if k > 0:
+                    for j in range(k):
+                        swap(
+                            L.elements[L.pos(k, j)],
+                            L.elements[L.pos(pivot_row, j)],
+                        )
+
+            @parameter
+            for i in range(k + 1, rows):
+                L.set[i, k](U.get[i, k]() / U.get[k, k]())
+
+                @parameter
+                for j in range(k + 1, cols):
+                    U.set[i, j](U.get[i, j]() - L.get[i, k]() * U.get[k, j]())
+
+        return (L, U, P)
 
 
 alias RowVec = Mat[1, _]
@@ -283,7 +388,14 @@ alias ColVec = Mat[_, 1]
 
 
 # fn main() raises:
-#     var x = Mat[3, 1](2)
-#     var y = Mat[3, 1](3)
-#     var z = y.transpose() @ x
-#     print(z[0])
+#     var x = Mat[3, 3](2, -4, -4, -1, 6, -2, -2, 3, 8)
+#     var y = x.LU_decompose()
+#     var L = y[0]
+#     var U = y[1]
+#     var P = y[2]
+#     var RHS = P @ x
+#     var LHS = L @ U
+#     for row in range(3):
+#         for col in range(3):
+#             if RHS[row, col] != LHS[row, col]:
+#                 print("Mismatch at", row, "and", col)
