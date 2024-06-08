@@ -13,6 +13,7 @@
 
 
 from utils import StaticTuple
+from math import isclose
 
 
 @value
@@ -139,6 +140,20 @@ struct Mat[rows: Int, cols: Int](Sized):
     @always_inline
     fn __len__(self) -> Int:
         return self.storage_size
+
+    @always_inline
+    fn __eq__(self, other: Self) -> Bool:
+        var res = True
+
+        @parameter
+        for i in range(self.storage_size):
+            res &= isclose(self.elements[i], other.elements[i])
+
+        return res
+
+    @always_inline
+    fn __ne__(self, other: Self) -> Bool:
+        return ~self.__eq__(other)
 
     @always_inline
     fn __add__(self, other: Self) -> Self:
@@ -307,12 +322,12 @@ struct Mat[rows: Int, cols: Int](Sized):
             self.set[second, col](tmp)
 
     @always_inline
-    fn swap_rows(inout self, first: Int, second: Int):
+    fn swap_rows[c1: Int = 0, c2: Int = cols](inout self, r1: Int, r2: Int):
         @parameter
-        for col in range(cols):
+        for col in range(c1, c2):
             swap(
-                self.elements[self.pos(first, col)],
-                self.elements[self.pos(second, col)],
+                self.elements[self.pos(r1, col)],
+                self.elements[self.pos(r2, col)],
             )
 
     @always_inline
@@ -363,14 +378,9 @@ struct Mat[rows: Int, cols: Int](Sized):
                     pivot_row = i
 
             if pivot_row != k:
-                U.swap_rows(k, pivot_row)
                 P.swap_rows(k, pivot_row)
-                if k > 0:
-                    for j in range(k):
-                        swap(
-                            L.elements[L.pos(k, j)],
-                            L.elements[L.pos(pivot_row, j)],
-                        )
+                U.swap_rows[k, cols](k, pivot_row)
+                L.swap_rows[0, k](k, pivot_row)
 
             @parameter
             for i in range(k + 1, rows):
@@ -380,6 +390,8 @@ struct Mat[rows: Int, cols: Int](Sized):
                 for j in range(k + 1, cols):
                     U.set[i, j](U.get[i, j]() - L.get[i, k]() * U.get[k, j]())
 
+                U.set[i, k](0.0)
+
         return (L, U, P)
 
 
@@ -388,14 +400,15 @@ alias ColVec = Mat[_, 1]
 
 
 # fn main() raises:
-#     var x = Mat[3, 3](2, -4, -4, -1, 6, -2, -2, 3, 8)
-#     var y = x.LU_decompose()
-#     var L = y[0]
-#     var U = y[1]
-#     var P = y[2]
-#     var RHS = P @ x
-#     var LHS = L @ U
-#     for row in range(3):
-#         for col in range(3):
-#             if RHS[row, col] != LHS[row, col]:
-#                 print("Mismatch at", row, "and", col)
+#     var A = Mat[3, 3](1, 4, 3, 1, 3, 5, 1, 1, 3)
+#     var LU = A.LU_decompose()
+#     var X = LU[0] @ LU[1]
+#     var Y = LU[2] @ A
+#     for i in range(LU[0].rows):
+#         for j in range(LU[0].cols):
+#             print(X[i, j], end=" ")
+#         print(end="\n")
+#     for i in range(LU[0].rows):
+#         for j in range(LU[0].cols):
+#             print(Y[i, j], end=" ")
+#         print(end="\n")
