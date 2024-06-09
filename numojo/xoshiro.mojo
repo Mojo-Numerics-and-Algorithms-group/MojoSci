@@ -60,7 +60,7 @@ struct Xoshiro256[scrambler: fn (Xoshiro256State) -> UInt64]:
         var seedr = SplitMix(self.seed)
         seedr.fill(self.state)
 
-    fn set_seed(inout self, seed: UInt64):
+    fn reseed(inout self, seed: UInt64):
         """Set a new seed and reset the generator."""
         self.seed = seed
         self.reset()

@@ -43,7 +43,7 @@ struct Xoroshiro128plus:
         var seedr = SplitMix(self.seed)
         seedr.fill(self.state)
 
-    fn set_seed(inout self, seed: UInt64):
+    fn reseed(inout self, seed: UInt64):
         """Set a new seed and reset the generator."""
         self.seed = seed
         self.reset()
@@ -116,7 +116,7 @@ struct Xoroshiro128plusplus:
         var seedr = SplitMix(self.seed)
         seedr.fill(self.state)
 
-    fn set_seed(inout self, seed: UInt64):
+    fn reseed(inout self, seed: UInt64):
         """Set a new seed and reset the generator."""
         self.seed = seed
         self.reset()
@@ -191,7 +191,7 @@ struct Xoroshiro128starstar:
         var seedr = SplitMix(self.seed)
         seedr.fill(self.state)
 
-    fn set_seed(inout self, seed: UInt64):
+    fn reseed(inout self, seed: UInt64):
         """Set a new seed and reset the generator."""
         self.seed = seed
         self.reset()

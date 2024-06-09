@@ -1,21 +1,29 @@
 from testing import *
-from numojo.linalg import Mat, ColVec
+from numojo.linalg import StaticMat, StaticColVec
+from numojo.splitmix import SplitMix
+
+
+var rng = SplitMix()
+
+
+fn mkfloat() -> Float64:
+    return rng()
 
 
 def test_mat_init_w_value():
-    var x = Mat[3, 3](2)
+    var x = StaticMat[3, 3](2)
     for i in range(3):
         for j in range(3):
             assert_equal(x[i, j], 2)
 
 
 def test_mat_init_w_values():
-    var x = Mat[2, 3](1, 2, 3, 4, 5, 6)
+    var x = StaticMat[2, 3](1, 2, 3, 4, 5, 6)
     assert_equal(x[1, 1], 4)
 
 
 def test_mat_fill():
-    var x = Mat[5, 4](1)
+    var x = StaticMat[5, 4](1)
     x.fill(2)
     assert_equal(x[4, 3], 2)
     x.set_diag(10)
@@ -23,12 +31,12 @@ def test_mat_fill():
 
 
 def test_mat_create_diag():
-    var x = Mat[7, 3].diag(2)
+    var x = StaticMat[7, 3].diag(2)
     assert_equal(x[1, 1], 2)
 
 
 def test_mat_get_set_item():
-    var x = Mat[8, 8](0)
+    var x = StaticMat[8, 8](0)
     for i in range(len(x)):
         x[i] = 2 / 3
         assert_equal(x[i], 2 / 3)
@@ -51,7 +59,7 @@ def test_mat_get_set_item():
 
 
 def test_get_row_col():
-    var x = Mat[3, 5](1)
+    var x = StaticMat[3, 5](1)
     var r = x.get_row(1)
     var c = x.get_col(4)
     assert_equal(r.rows, 1)
@@ -73,13 +81,13 @@ def test_get_row_col():
 
 
 def test_mat_len():
-    var x = Mat[3, 3]()
+    var x = StaticMat[3, 3]()
     assert_equal(len(x), x.rows * x.cols)
 
 
 def test_mat_alg():
-    var a = Mat[2, 3](1)
-    var b = Mat[2, 3](2)
+    var a = StaticMat[2, 3](1)
+    var b = StaticMat[2, 3](2)
     assert_equal((a + b)[1, 1], 3)
     assert_equal((a - b)[1, 1], -1)
     assert_equal((a * b)[1, 1], 2)
@@ -97,15 +105,15 @@ def test_mat_alg():
 
 def test_mat_nonlin_sys():
     @always_inline
-    fn dy(s: ColVec[3], pars: ColVec[3]) raises -> ColVec[3]:
-        return ColVec[3](
+    fn dy(s: StaticColVec[3], pars: StaticColVec[3]) raises -> StaticColVec[3]:
+        return StaticColVec[3](
             pars[0] * (s[1] - s[0]),
             s[0] * (pars[1] - s[2]) - s[1],
             s[0] * s[1] - pars[2] * s[2],
         )
 
-    var s = ColVec[3](2, 1, 1)
-    var p = ColVec[3](10, 28, 8 / 3)
+    var s = StaticColVec[3](2, 1, 1)
+    var p = StaticColVec[3](10, 28, 8 / 3)
 
     var deriv = dy(s, p)
 
@@ -113,7 +121,21 @@ def test_mat_nonlin_sys():
 
 
 def test_mat_lu_decomp():
-    var A = Mat[3, 3](2, -1, 1, 3, 3, 9, 3, 3, 5).transpose()
-    var LU = A.LU_decompose()
-    assert_true(LU[0] @ LU[1] == LU[2] @ A)
-    # assert_true(LU[0] == Mat[3, 3](1, 0, 0, 1.5, 1, 0, 1.5, 0, 1).transpose())
+    var X1 = StaticMat[3, 3](mkfloat)
+    var LU1 = X1.PLU_decompose()
+    assert_true(LU1[1] @ LU1[2] == LU1[0] @ X1)
+    var X2 = StaticMat[1, 1](mkfloat)
+    var LU2 = X2.PLU_decompose()
+    assert_true(LU2[1] @ LU2[2] == LU2[0] @ X2)
+    var X3 = StaticMat[1, 3](mkfloat)
+    var LU3 = X3.PLU_decompose()
+    assert_true(LU3[1] @ LU3[2] == LU3[0] @ X3)
+    var X4 = StaticMat[3, 1](mkfloat)
+    var LU4 = X4.PLU_decompose()
+    assert_true(LU4[1] @ LU4[2] == LU4[0] @ X4)
+    var X5 = StaticMat[3, 5](mkfloat)
+    var LU5 = X5.PLU_decompose()
+    assert_true(LU5[1] @ LU5[2] == LU5[0] @ X5)
+    var X6 = StaticMat[5, 3](mkfloat)
+    var LU6 = X6.PLU_decompose()
+    assert_true(LU6[1] @ LU6[2] == LU6[0] @ X6)

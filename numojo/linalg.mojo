@@ -18,7 +18,9 @@ from math import isclose
 
 @value
 @register_passable("trivial")
-struct Mat[rows: Int, cols: Int](Sized):
+struct StaticMat[rows: Int, cols: Int](Sized):
+    """A fixed-size small-matrix type."""
+
     alias element_type = Float64
     alias storage_size = rows * cols
     alias storage_type = StaticTuple[Self.element_type, Self.storage_size]
@@ -40,6 +42,14 @@ struct Mat[rows: Int, cols: Int](Sized):
         self.fill(fill)
 
     @always_inline
+    fn __init__(inout self, generator: fn () -> Self.element_type):
+        constrained[
+            self.storage_size > 0, "Matrix size must be greater than zero."
+        ]()
+        self.elements = self.storage_type()
+        self.fill(generator)
+
+    @always_inline
     fn __init__(inout self, *elems: Self.element_type):
         self.elements = self.storage_type(elems)
 
@@ -52,6 +62,12 @@ struct Mat[rows: Int, cols: Int](Sized):
         @parameter
         for i in range(self.storage_size):
             self.elements[i] = value
+
+    @always_inline
+    fn fill(inout self, generator: fn () -> Self.element_type):
+        @parameter
+        for i in range(self.storage_size):
+            self.elements[i] = generator()
 
     @always_inline
     fn set_diag(inout self, value: Self.element_type):
@@ -94,10 +110,10 @@ struct Mat[rows: Int, cols: Int](Sized):
         self.elements[self.pos(row, col)] = value
 
     @always_inline
-    fn get_col(self, col: Int) raises -> ColVec[rows]:
+    fn get_col(self, col: Int) raises -> StaticColVec[rows]:
         if col < 0 or col > cols:
             raise Error("Index out of bounds")
-        var res = ColVec[rows]()
+        var res = StaticColVec[rows]()
 
         @parameter
         for i in range(rows):
@@ -106,8 +122,8 @@ struct Mat[rows: Int, cols: Int](Sized):
         return res
 
     @always_inline
-    fn get_col[col: Int](self) -> ColVec[rows]:
-        var res = ColVec[rows]()
+    fn get_col[col: Int](self) -> StaticColVec[rows]:
+        var res = StaticColVec[rows]()
 
         @parameter
         for row in range(rows):
@@ -116,10 +132,10 @@ struct Mat[rows: Int, cols: Int](Sized):
         return res
 
     @always_inline
-    fn get_row(self, row: Int) raises -> RowVec[cols]:
+    fn get_row(self, row: Int) raises -> StaticRowVec[cols]:
         if row < 0 or row > rows:
             raise Error("Index out of bounds")
-        var res = RowVec[cols]()
+        var res = StaticRowVec[cols]()
 
         @parameter
         for i in range(cols):
@@ -128,8 +144,8 @@ struct Mat[rows: Int, cols: Int](Sized):
         return res
 
     @always_inline
-    fn get_row[row: Int](self) -> RowVec[cols]:
-        var res = RowVec[cols]()
+    fn get_row[row: Int](self) -> StaticRowVec[cols]:
+        var res = StaticRowVec[cols]()
 
         @parameter
         for col in range(cols):
@@ -190,9 +206,9 @@ struct Mat[rows: Int, cols: Int](Sized):
         return col * rows + row
 
     @always_inline
-    fn __matmul__(self, other: Mat) -> Mat[rows, other.cols]:
+    fn __matmul__(self, other: StaticMat) -> StaticMat[rows, other.cols]:
         constrained[cols == other.rows, "Incompatible dimensions"]()
-        var res = Mat[rows, other.cols](0)
+        var res = StaticMat[rows, other.cols](0)
 
         @parameter
         for i in range(res.rows):
@@ -348,8 +364,8 @@ struct Mat[rows: Int, cols: Int](Sized):
             )
 
     @always_inline
-    fn transpose(self) -> Mat[cols, rows]:
-        var res = Mat[cols, rows]()
+    fn transpose(self) -> StaticMat[cols, rows]:
+        var res = StaticMat[cols, rows]()
 
         @parameter
         for row in range(rows):
@@ -361,54 +377,82 @@ struct Mat[rows: Int, cols: Int](Sized):
         return res
 
     @always_inline
-    fn LU_decompose(self) -> (Mat[rows, rows], Self, Mat[rows, rows]):
-        var L = Mat[rows, rows].diag()
-        var U = self
-        var P = L
+    fn PLU_decompose(
+        self,
+    ) -> (StaticMat[rows, rows], StaticMat[rows, rows], Self):
+        """Compute PLU decomposition."""
 
+        var P = StaticMat[rows, rows].diag()
+        var L = P
+        var U = self
+
+        # rows, cols are compile-time parameters (constants)
         @parameter
         for k in range(min(rows, cols)):
             var pivot_row = k
-            var max_value = abs(U.get[k, k]())
+            var max_value = abs(U.get[k, k]())  # |U[k, k]|
 
             @parameter
             for i in range(k + 1, rows):
                 if abs(U.get[i, k]()) > max_value:
-                    max_value = abs(U.get[i, k]())
+                    max_value = abs(U.get[i, k]())  # |U[i, k]|
                     pivot_row = i
 
             if pivot_row != k:
+                # Swap full rows
                 P.swap_rows(k, pivot_row)
+                # Swap rows with col in k to cols - 1
                 U.swap_rows[k, cols](k, pivot_row)
+                # Swap rows with col in 0 to k - 1
                 L.swap_rows[0, k](k, pivot_row)
 
             @parameter
             for i in range(k + 1, rows):
-                L.set[i, k](U.get[i, k]() / U.get[k, k]())
+                if ~isclose(U.get[k, k](), 0):
+                    # L[i, k] = U[i, k] / U[k, k]
+                    L.set[i, k](U.get[i, k]() / U.get[k, k]())
 
                 @parameter
                 for j in range(k + 1, cols):
+                    # U[i, j] = U[i, j] - L[i, k] * U[k, j]
                     U.set[i, j](U.get[i, j]() - L.get[i, k]() * U.get[k, j]())
 
-                U.set[i, k](0.0)
+                U.set[i, k](0.0)  # U[i, k] = 0
 
-        return (L, U, P)
-
-
-alias RowVec = Mat[1, _]
-alias ColVec = Mat[_, 1]
+        return (P, L, U)
 
 
-# fn main() raises:
-#     var A = Mat[3, 3](1, 4, 3, 1, 3, 5, 1, 1, 3)
-#     var LU = A.LU_decompose()
-#     var X = LU[0] @ LU[1]
-#     var Y = LU[2] @ A
-#     for i in range(LU[0].rows):
-#         for j in range(LU[0].cols):
-#             print(X[i, j], end=" ")
-#         print(end="\n")
-#     for i in range(LU[0].rows):
-#         for j in range(LU[0].cols):
-#             print(Y[i, j], end=" ")
-#         print(end="\n")
+alias StaticRowVec = StaticMat[1, _]
+alias StaticColVec = StaticMat[_, 1]
+
+
+fn main() raises:
+    var X6 = StaticMat[5, 3](1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+    var LU6 = X6.PLU_decompose()
+    print(LU6[1] @ LU6[2] == LU6[0] @ X6)
+    var P = LU6[0]
+    var L = LU6[1]
+    var U = LU6[2]
+    for i in range(L.rows):
+        for j in range(L.cols):
+            print(L[i, j], end=" ")
+        print("\n")
+    for i in range(U.rows):
+        for j in range(U.cols):
+            print(U[i, j], end=" ")
+        print("\n")
+    for i in range(P.rows):
+        for j in range(P.cols):
+            print(P[i, j], end=" ")
+        print("\n")
+    var LU = L @ U
+    for i in range(LU.rows):
+        for j in range(LU.cols):
+            print(LU[i, j], end=" ")
+        print("\n")
+    var PA = P @ X6
+    for i in range(PA.rows):
+        for j in range(PA.cols):
+            print(PA[i, j], end=" ")
+        print("\n")
+    print(LU == PA)

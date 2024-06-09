@@ -5,8 +5,8 @@ from numojo.splitmix import *
 
 fn bench_mat_mat_mult[rows: Int, cols: Int]() raises -> Report:
     var rng = SplitMix()
-    var x = Mat[rows, cols](0)
-    var y = Mat[cols, rows](0)
+    var x = StaticMat[rows, cols](0)
+    var y = StaticMat[cols, rows](0)
     for i in range(rows):
         for j in range(cols):
             x[i, j] = rng.next()
