@@ -21,6 +21,7 @@ Here is the output (slightly edited) from running the bench script.
 | Numojo | xoshiro256pp | 1.0 |
 | Numojo | xoshiro256ss | 1.2 |
 | Numojo | xoshiro256ppp4 | 1.4 |
+
 The last row is generating 4 independent streams in parallel using SIMD operations. It is not an especially fair comparison between the Mojo library and these generators as the library functions scale the output. Nonetheless, these generators appear to be about 3x faster than the one used by Mojo. Note that the generator in the standard library is not documented and is part of a currently closed-source runtime component.
 
 ## ODE Integration
