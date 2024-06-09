@@ -15,50 +15,58 @@ from time import now
 from bit import rotate_bits_left
 from numojo.splitmix import SplitMix
 
-
-alias Xoshiro256State = SIMD[DType.uint64, 4]
-
-
 @always_inline
-fn xoshiro256_plus(state: Xoshiro256State) -> UInt64:
+fn xoshiro256_plus(s0: UInt64, s1: UInt64, s2: UInt64, s3: UInt64) -> UInt64:
     """Scrambler for xoshiro plus generator with 256-bits of state."""
-    return state[0] + state[3]
+    return s0 + s3
 
 
 @always_inline
-fn xoshiro256_plus_plus(state: Xoshiro256State) -> UInt64:
+fn xoshiro256_plus_plus(s0: UInt64, s1: UInt64, s2: UInt64, s3: UInt64) -> UInt64:
     """Scrambler for xoshiro plus-plus generator with 256-bits of state."""
-    return rotate_bits_left[23](state[0] + state[3]) + state[0]
+    return rotate_bits_left[23](s0 + s3) + s0
 
 
 @always_inline
-fn xoshiro256_star_star(state: Xoshiro256State) -> UInt64:
+fn xoshiro256_star_star(s0: UInt64, s1: UInt64, s2: UInt64, s3: UInt64) -> UInt64:
      """Scrambler for xoshiro star-star generator with 256-bits of state."""
-    return rotate_bits_left[7](state[1] * 5) * 9
+    return rotate_bits_left[7](s1 * 5) * 9
 
 
 @register_passable("trivial")
-struct Xoshiro256[scrambler: fn (Xoshiro256State) -> UInt64]:
+struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
     """Engine for xoshiro generators with 256-bits of state."""
-    var state: Xoshiro256State
     var seed: UInt64
+    var s0: UInt64
+    var s1: UInt64
+    var s2: UInt64 
+    var s3: UInt64 
 
     fn __init__(inout self):
         """Seed with current time."""
-        self.state = 0
+        self.s0 = 0
+        self.s1 = 0
+        self.s2 = 0
+        self.s3 = 0
         self.seed = now()
         self.reset()
 
     fn __init__(inout self, seed: UInt64):
         """Seed with provided value."""
-        self.state = 0
+        self.s0 = 0
+        self.s1 = 0
+        self.s2 = 0
+        self.s3 = 0
         self.seed = seed
         self.reset()
 
     fn reset(inout self):
          """Start the sequence over using the current seed value."""
         var seedr = SplitMix(self.seed)
-        seedr.fill(self.state)
+        self.s0 = seedr.next()
+        self.s1 = seedr.next()
+        self.s2 = seedr.next()
+        self.s3 = seedr.next()
 
     fn reseed(inout self, seed: UInt64):
         """Set a new seed and reset the generator."""
@@ -72,54 +80,229 @@ struct Xoshiro256[scrambler: fn (Xoshiro256State) -> UInt64]:
     @always_inline
     fn step(inout self):
         """Advance the generator by one step."""
-        var t = self.state[1] << 17
-        self.state[2] ^= self.state[0]
-        self.state[3] ^= self.state[1]
-        self.state[1] ^= self.state[2]
-        self.state[0] ^= self.state[3]
-        self.state[2] ^= t
-        self.state[3] = rotate_bits_left[45](self.state[3])
+        var t = self.s1 << 17
+        self.s2 ^= self.s0
+        self.s3 ^= self.s1
+        self.s1 ^= self.s2
+        self.s0 ^= self.s3
+        self.s2 ^= t
+        self.s3 = rotate_bits_left[45](self.s3)
 
     @always_inline
     fn next(inout self) -> UInt64:
         """Return the next value in the sequence."""
-        var res = scrambler(self.state)
+        var res = scrambler(self.s0, self.s1, self.s2, self.s3)
         self.step()
         return res
 
     fn jump(inout self):
         """Jump forward in the sequence."""
-        var res: Xoshiro256State = 0
-        var coefs = Xoshiro256State(
-            0x180EC6D33CFD0ABA,
-            0xD5A61266F0C9392C,
-            0xA9582618E03FC9AA,
-            0x39ABDC4529B1661C,
-        )
-        for i in range(4):
-            for j in range(64):
-                if coefs[i] & (1 << j):
-                    res ^= self.state
-                self.step()
-        self.state = res
+        alias coefs0: UInt64 = 0x180EC6D33CFD0ABA
+        alias coefs1: UInt64 = 0xD5A61266F0C9392C
+        alias coefs2: UInt64 = 0xA9582618E03FC9AA
+        alias coefs3: UInt64 = 0x39ABDC4529B1661C
+        var s0: UInt64 = 0
+        var s1: UInt64 = 0
+        var s2: UInt64 = 0
+        var s3: UInt64 = 0
+        for j in range(64):
+            if coefs0 & (1 << j):
+                s0 ^= self.s0
+                s1 ^= self.s1
+                s2 ^= self.s2
+                s3 ^= self.s3
+            self.step()
+        for j in range(64):
+            if coefs1 & (1 << j):
+                s0 ^= self.s0
+                s1 ^= self.s1
+                s2 ^= self.s2
+                s3 ^= self.s3
+            self.step()
+        for j in range(64):
+            if coefs2 & (1 << j):
+                s0 ^= self.s0
+                s1 ^= self.s1
+                s2 ^= self.s2
+                s3 ^= self.s3
+            self.step()
+        for j in range(64):
+            if coefs3 & (1 << j):
+                s0 ^= self.s0
+                s1 ^= self.s1
+                s2 ^= self.s2
+                s3 ^= self.s3
+            self.step()
+        self.s0 = s0
+        self.s1 = s1
+        self.s2 = s2
+        self.s3 = s3
 
     fn long_jump(inout self):
         """Jump forward in the sequence."""
-        var res: Xoshiro256State = 0
-        var coefs = Xoshiro256State(
-            0x76E15D3EFEFDCBBF,
-            0xC5004E441C522FB3,
-            0x77710069854EE241,
-            0x39109BB02ACBE635,
-        )
-        for i in range(4):
-            for j in range(64):
-                if coefs[i] & (1 << j):
-                    res ^= self.state
-                self.step()
-        self.state = res
+        alias coefs0: UInt64 = 0x76E15D3EFEFDCBBF
+        alias coefs1: UInt64 = 0xC5004E441C522FB3
+        alias coefs2: UInt64 = 0x77710069854EE241
+        alias coefs3: UInt64 = 0x39109BB02ACBE635
 
+        var s0: UInt64 = 0
+        var s1: UInt64 = 0
+        var s2: UInt64 = 0
+        var s3: UInt64 = 0
+        for j in range(64):
+            if coefs0 & (1 << j):
+                s0 ^= self.s0
+                s1 ^= self.s1
+                s2 ^= self.s2
+                s3 ^= self.s3
+            self.step()
+        for j in range(64):
+            if coefs1 & (1 << j):
+                s0 ^= self.s0
+                s1 ^= self.s1
+                s2 ^= self.s2
+                s3 ^= self.s3
+            self.step()
+        for j in range(64):
+            if coefs2 & (1 << j):
+                s0 ^= self.s0
+                s1 ^= self.s1
+                s2 ^= self.s2
+                s3 ^= self.s3
+            self.step()
+        for j in range(64):
+            if coefs3 & (1 << j):
+                s0 ^= self.s0
+                s1 ^= self.s1
+                s2 ^= self.s2
+                s3 ^= self.s3
+            self.step()
+        self.s0 = s0
+        self.s1 = s1
+        self.s2 = s2
+        self.s3 = s3
 
 alias Xoshiro256plus = Xoshiro256[xoshiro256_plus]
 alias Xoshiro256plusplus = Xoshiro256[xoshiro256_plus_plus]
 alias Xoshiro256starstar = Xoshiro256[xoshiro256_star_star]
+
+@register_passable("trivial")
+struct Xoshiro256ParallelPlusPlus[n: Int = 4]:
+    """Compute n parallel streams."""
+
+    alias StateType = SIMD[DType.uint64, n]
+
+    var seed: UInt64
+    
+    var s0: Self.StateType
+    var s1: Self.StateType
+    var s2: Self.StateType
+    var s3: Self.StateType
+
+    fn __init__(inout self):
+        """Seed with current time."""
+        self.s0 = 0
+        self.s1 = 0
+        self.s2 = 0
+        self.s3 = 0
+        self.seed = now()
+        self.reset()
+
+    fn __init__(inout self, seed: UInt64):
+        """Seed with provided value."""
+        self.s0 = 0
+        self.s1 = 0
+        self.s2 = 0
+        self.s3 = 0
+        self.seed = seed
+        self.reset()
+
+    fn reset(inout self):
+         """Start the sequence over using the current seed value.
+         
+            The first stream is seeded just as Xoshiro256plusplus.
+            The other n-1 streams are seeded by taking a long jump
+            and assigning the jumped state to the next generator.
+            This will result in independent streams, which will be
+            returned as n-values in a SIMD.
+        """
+        var seedr = Xoshiro256plusplus(self.seed)
+        for i in range(n):
+            self.s0[i] = seedr.s0
+            self.s1[i] = seedr.s1
+            self.s2[i] = seedr.s2
+            self.s3[i] = seedr.s3
+            seedr.long_jump()
+
+    fn reseed(inout self, seed: UInt64):
+        """Set a new seed and reset the generator."""
+        self.seed = seed
+        self.reset()
+
+    fn get_seed(self) -> UInt64:
+        """Return the current seed value."""
+        return self.seed
+
+    @always_inline
+    fn step(inout self):
+        """Advance the generator by one step.
+        
+            The streams are advanced in parallel
+            using SIMD operations.
+        """
+        var t = self.s1 << 17
+        self.s2 ^= self.s0
+        self.s3 ^= self.s1
+        self.s1 ^= self.s2
+        self.s0 ^= self.s3
+        self.s2 ^= t
+        self.s3 = rotate_bits_left[45](self.s3)
+
+    @always_inline
+    fn next(inout self) -> Self.StateType:
+        """Return the next value in the sequence.
+        
+            The nth stream value will be in result[n - 1].
+        """
+        var res = rotate_bits_left[23](self.s0 + self.s3) + self.s0
+        self.step()
+        return res
+
+    fn jump(inout self):
+        """Jump forward in the sequence.
+        
+            Using this method may not result in
+            independent streams.
+        """
+        var jumpr = Xoshiro256plusplus()
+        for i in range(n):
+            jumpr.s0 = self.s0[i]
+            jumpr.s1 = self.s1[i]
+            jumpr.s2 = self.s2[i]
+            jumpr.s3 = self.s3[i]
+            jumpr.jump()
+            self.s0[i] = jumpr.s0
+            self.s1[i] = jumpr.s1
+            self.s2[i] = jumpr.s2
+            self.s3[i] = jumpr.s3
+
+
+    fn long_jump(inout self):
+        """Jump forward in the sequence.
+        
+            Using this method may not result in
+            independent streams.
+        """
+        var jumpr = Xoshiro256plusplus()
+        for i in range(n):
+            jumpr.s0 = self.s0[i]
+            jumpr.s1 = self.s1[i]
+            jumpr.s2 = self.s2[i]
+            jumpr.s3 = self.s3[i]
+            jumpr.long_jump()
+            self.s0[i] = jumpr.s0
+            self.s1[i] = jumpr.s1
+            self.s2[i] = jumpr.s2
+            self.s3[i] = jumpr.s3
+
+

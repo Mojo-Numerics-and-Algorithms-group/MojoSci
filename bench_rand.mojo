@@ -5,12 +5,15 @@ from numojo.splitmix import *
 from numojo.xoroshiro import *
 
 
+alias steps = 1e6
+
+
 fn bench_rand_ui64() -> Report:
     seed()
 
     fn doit():
         var x: UInt64 = 0
-        for i in range(1e6):
+        for _ in range(steps):
             x = random_ui64(0, 1e9)
             keep(x)
 
@@ -22,7 +25,7 @@ fn bench_rand_si64() -> Report:
 
     fn doit():
         var x: Int64 = 0
-        for i in range(1e6):
+        for _ in range(steps):
             x = random_si64(0, 1e9)
             keep(x)
 
@@ -34,7 +37,7 @@ fn bench_random_float64() -> Report:
 
     fn doit():
         var x: Float64 = 0
-        for i in range(1e6):
+        for _ in range(steps):
             x = random_float64()
             keep(x)
 
@@ -46,7 +49,7 @@ fn bench_randn_float64() -> Report:
 
     fn doit():
         var x: Float64 = 0
-        for i in range(1e6):
+        for _ in range(steps):
             x = randn_float64()
             keep(x)
 
@@ -58,7 +61,7 @@ fn bench_splitmix() -> Report:
 
     fn doit() capturing:
         var x: UInt64 = 0
-        for i in range(1e6):
+        for _ in range(steps):
             x = rng.next()
             keep(x)
 
@@ -70,7 +73,7 @@ fn bench_xoroshiro128plus() -> Report:
 
     fn doit() capturing:
         var x: UInt64 = 0
-        for i in range(1e6):
+        for _ in range(steps):
             x = rng.next()
             keep(x)
 
@@ -82,7 +85,7 @@ fn bench_xoroshiro128plusplus() -> Report:
 
     fn doit() capturing:
         var x: UInt64 = 0
-        for i in range(1e6):
+        for _ in range(steps):
             x = rng.next()
             keep(x)
 
@@ -94,7 +97,7 @@ fn bench_xoroshiro128starstar() -> Report:
 
     fn doit() capturing:
         var x: UInt64 = 0
-        for i in range(1e6):
+        for _ in range(steps):
             x = rng.next()
             keep(x)
 
@@ -106,7 +109,7 @@ fn bench_xoshiro256plus() -> Report:
 
     fn doit() capturing:
         var x: UInt64 = 0
-        for i in range(1e6):
+        for _ in range(steps):
             x = rng.next()
             keep(x)
 
@@ -118,7 +121,7 @@ fn bench_xoshiro256plusplus() -> Report:
 
     fn doit() capturing:
         var x: UInt64 = 0
-        for i in range(1e6):
+        for _ in range(steps):
             x = rng.next()
             keep(x)
 
@@ -130,7 +133,19 @@ fn bench_xoshiro256starstar() -> Report:
 
     fn doit() capturing:
         var x: UInt64 = 0
-        for i in range(1e6):
+        for _ in range(steps):
+            x = rng.next()
+            keep(x)
+
+    return run[doit]()
+
+
+fn bench_xoshiro256parallelplusplus() -> Report:
+    var rng = Xoshiro256ParallelPlusPlus()
+
+    fn doit() capturing:
+        var x: rng.StateType = 0
+        for _ in range(steps):
             x = rng.next()
             keep(x)
 
@@ -140,46 +155,55 @@ fn bench_xoshiro256starstar() -> Report:
 fn main():
     print("| Library  | Function    | Time (ns) |")
     print("| -------- | ----------- | --------- |")
-    print("| Standard | random_ui64 |", bench_rand_si64().mean("ns") / 1e6, "|")
-    print("| Standard | random_si64 |", bench_rand_si64().mean("ns") / 1e6, "|")
+    print(
+        "| Standard | random_ui64 |", bench_rand_si64().mean("ns") / steps, "|"
+    )
+    print(
+        "| Standard | random_si64 |", bench_rand_si64().mean("ns") / steps, "|"
+    )
     print(
         "| Standard | random_float64 |",
-        bench_random_float64().mean("ns") / 1e6,
+        bench_random_float64().mean("ns") / steps,
         "|",
     )
     print(
         "| Standard | randn_float64 |",
-        bench_randn_float64().mean("ns") / 1e6,
+        bench_randn_float64().mean("ns") / steps,
         "|",
     )
-    print("| Numojo | splitmix |", bench_splitmix().mean("ns") / 1e6, "|")
+    print("| Numojo | splitmix |", bench_splitmix().mean("ns") / steps, "|")
     print(
         "| Numojo | xoroshiro128p |",
-        bench_xoroshiro128plus().mean("ns") / 1e6,
+        bench_xoroshiro128plus().mean("ns") / steps,
         "|",
     )
     print(
         "| Numojo | xoroshiro128pp |",
-        bench_xoroshiro128plusplus().mean("ns") / 1e6,
+        bench_xoroshiro128plusplus().mean("ns") / steps,
         "|",
     )
     print(
         "| Numojo | xoroshiro128ss |",
-        bench_xoroshiro128starstar().mean("ns") / 1e6,
+        bench_xoroshiro128starstar().mean("ns") / steps,
         "|",
     )
     print(
         "| Numojo | xoshiro256p |",
-        bench_xoshiro256plus().mean("ns") / 1e6,
+        bench_xoshiro256plus().mean("ns") / steps,
         "|",
     )
     print(
         "| Numojo | xoshiro256pp |",
-        bench_xoshiro256plusplus().mean("ns") / 1e6,
+        bench_xoshiro256plusplus().mean("ns") / steps,
         "|",
     )
     print(
         "| Numojo | xoshiro256ss |",
-        bench_xoshiro256starstar().mean("ns") / 1e6,
+        bench_xoshiro256starstar().mean("ns") / steps,
+        "|",
+    )
+    print(
+        "| Numojo | xoshiro256ppp4 |",
+        bench_xoshiro256parallelplusplus().mean("ns") / steps,
         "|",
     )
