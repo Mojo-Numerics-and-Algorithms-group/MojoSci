@@ -426,33 +426,33 @@ alias StaticRowVec = StaticMat[1, _]
 alias StaticColVec = StaticMat[_, 1]
 
 
-fn main() raises:
-    var X6 = StaticMat[5, 3](1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
-    var LU6 = X6.PLU_decompose()
-    print(LU6[1] @ LU6[2] == LU6[0] @ X6)
-    var P = LU6[0]
-    var L = LU6[1]
-    var U = LU6[2]
-    for i in range(L.rows):
-        for j in range(L.cols):
-            print(L[i, j], end=" ")
-        print("\n")
-    for i in range(U.rows):
-        for j in range(U.cols):
-            print(U[i, j], end=" ")
-        print("\n")
-    for i in range(P.rows):
-        for j in range(P.cols):
-            print(P[i, j], end=" ")
-        print("\n")
-    var LU = L @ U
-    for i in range(LU.rows):
-        for j in range(LU.cols):
-            print(LU[i, j], end=" ")
-        print("\n")
-    var PA = P @ X6
-    for i in range(PA.rows):
-        for j in range(PA.cols):
-            print(PA[i, j], end=" ")
-        print("\n")
-    print(LU == PA)
+# fn main() raises:
+#     var X6 = StaticMat[5, 3](1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+#     var LU6 = X6.PLU_decompose()
+#     print(LU6[1] @ LU6[2] == LU6[0] @ X6)
+#     var P = LU6[0]
+#     var L = LU6[1]
+#     var U = LU6[2]
+#     for i in range(L.rows):
+#         for j in range(L.cols):
+#             print(L[i, j], end=" ")
+#         print("\n")
+#     for i in range(U.rows):
+#         for j in range(U.cols):
+#             print(U[i, j], end=" ")
+#         print("\n")
+#     for i in range(P.rows):
+#         for j in range(P.cols):
+#             print(P[i, j], end=" ")
+#         print("\n")
+#     var LU = L @ U
+#     for i in range(LU.rows):
+#         for j in range(LU.cols):
+#             print(LU[i, j], end=" ")
+#         print("\n")
+#     var PA = P @ X6
+#     for i in range(PA.rows):
+#         for j in range(PA.cols):
+#             print(PA[i, j], end=" ")
+#         print("\n")
+#     print(LU == PA)

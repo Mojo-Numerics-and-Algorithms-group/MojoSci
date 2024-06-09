@@ -33,18 +33,16 @@ struct PRNG[T: PRNGEngine]:
         return (max - min) * (res / self.max_value) + min
 
     fn normal(inout self, mean: Float64 = 0, sd: Float64 = 1) -> Float64:
-        var a: Float64 = 0
-        var b: Float64 = 0
-        while a < 1e-7:
-            a = self.uniform()
-            b = self.uniform()
-        return sd * sqrt(-2 * log(a)) * cos(6.28318530718 * b) + mean
+        alias pi2: Float64 = 6.28318530718
+        var a: Float64 = self.uniform(min=1e-7)
+        var b: Float64 = self.uniform()
+        return sd * sqrt(-2 * log(a)) * cos(pi2 * b) + mean
 
 
-# from numojo.splitmix import SplitMix
+from numojo.splitmix import SplitMix
 
 
-# fn main():
-#     var eng = SplitMix()
-#     var rng = PRNG(eng)
-#     print(rng.normal())
+fn main():
+    var eng = SplitMix()
+    var rng = PRNG(eng)
+    print(rng.normal())
