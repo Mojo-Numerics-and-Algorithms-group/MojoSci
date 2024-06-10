@@ -23,7 +23,7 @@ Here is the output (slightly edited) from running the bench script.
 | Numojo | xoshiro256pp x 4 | 1.44 |
 | Numojo | xoshiro256pp x 16 | 5.93 |
 
-The last row is generating 4 independent streams in parallel using SIMD operations. It is not an especially fair comparison between the Mojo library and these generators as the library functions scale the output. Nonetheless, these generators appear to be about 3x faster than the one used by Mojo. Note that the generator in the standard library is not documented and is part of a currently closed-source runtime component.
+On my laptop, the Xoshiro Plus Plus generates 64 Gbps of pseudo-entropy. Using SIMD arithmetic and parallel generators, it generates 178 Gbps with 4 parallel generators and 173 Gbps with 16 parallel generators. The number of parallel generators is set at compile-time. The parallel generators use a single seed and are split from the first generator using the long_jump function. Then ensures independent, non-overlapping sequences. See the website link above for more details.
 
 ## ODE Integration
 

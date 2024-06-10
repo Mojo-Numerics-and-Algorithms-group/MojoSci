@@ -21,8 +21,10 @@ struct Xoroshiro128Plus:
     """Xoroshiro128plus generator."""
 
     alias StateType = UInt64
+    alias ValueType = UInt64
+    alias SeedType = UInt64
 
-    var seed: UInt64
+    var seed: Self.SeedType
     var s0: Self.StateType
     var s1: Self.StateType
 
@@ -33,7 +35,7 @@ struct Xoroshiro128Plus:
         self.seed = now()
         self.reset()
 
-    fn __init__(inout self, seed: UInt64):
+    fn __init__(inout self, seed: Self.SeedType):
         """Seed with provided value."""
         self.s0 = 0
         self.s1 = 0
@@ -43,15 +45,17 @@ struct Xoroshiro128Plus:
     fn reset(inout self):
         """Start the sequence over using the current seed value."""
         var seedr = SplitMix(self.seed)
+        for _ in range(1e3):
+            seedr.step()
         self.s0 = seedr.next()
         self.s1 = seedr.next()
 
-    fn reseed(inout self, seed: UInt64):
+    fn reseed(inout self, seed: Self.SeedType):
         """Set a new seed and reset the generator."""
         self.seed = seed
         self.reset()
 
-    fn get_seed(self) -> UInt64:
+    fn get_seed(self) -> Self.SeedType:
         """Return the current seed value."""
         return self.seed
 
@@ -63,7 +67,7 @@ struct Xoroshiro128Plus:
         self.s1 = rotate_bits_left[37](self.s1)
 
     @always_inline
-    fn next(inout self) -> UInt64:
+    fn next(inout self) -> Self.ValueType:
         """Return the next value in the sequence."""
         var res = self.s0 + self.s1
         self.step()
@@ -112,8 +116,10 @@ struct Xoroshiro128PlusPlus:
     """Xoroshiro128plusplus generator."""
 
     alias StateType = UInt64
+    alias ValueType = UInt64
+    alias SeedType = UInt64
 
-    var seed: UInt64
+    var seed: Self.SeedType
     var s0: Self.StateType
     var s1: Self.StateType
 
@@ -124,7 +130,7 @@ struct Xoroshiro128PlusPlus:
         self.seed = now()
         self.reset()
 
-    fn __init__(inout self, seed: UInt64):
+    fn __init__(inout self, seed: Self.SeedType):
         """Seed with provided value."""
         self.s0 = 0
         self.s1 = 0
@@ -134,15 +140,17 @@ struct Xoroshiro128PlusPlus:
     fn reset(inout self):
         """Start the sequence over using the current seed value."""
         var seedr = SplitMix(self.seed)
+        for _ in range(1e6):
+            seedr.step()
         self.s0 = seedr.next()
         self.s1 = seedr.next()
 
-    fn reseed(inout self, seed: UInt64):
+    fn reseed(inout self, seed: Self.SeedType):
         """Set a new seed and reset the generator."""
         self.seed = seed
         self.reset()
 
-    fn get_seed(self) -> UInt64:
+    fn get_seed(self) -> Self.SeedType:
         """Return the current seed value."""
         return self.seed
 
@@ -154,7 +162,7 @@ struct Xoroshiro128PlusPlus:
         self.s1 = rotate_bits_left[28](self.s1)
 
     @always_inline
-    fn next(inout self) -> UInt64:
+    fn next(inout self) -> Self.ValueType:
         """Return the next value in the sequence."""
         var res = rotate_bits_left[17](self.s0 + self.s1) + self.s0
         self.step()
@@ -203,8 +211,10 @@ struct Xoroshiro128StarStar:
     """Xoroshiro128starstar generator."""
 
     alias StateType = UInt64
+    alias ValueType = UInt64
+    alias SeedType = UInt64
 
-    var seed: UInt64
+    var seed: Self.SeedType
     var s0: Self.StateType
     var s1: Self.StateType
 
@@ -215,7 +225,7 @@ struct Xoroshiro128StarStar:
         self.seed = now()
         self.reset()
 
-    fn __init__(inout self, seed: UInt64):
+    fn __init__(inout self, seed: Self.SeedType):
         """Seed with provided value."""
         self.s0 = 0
         self.s1 = 0
@@ -225,15 +235,17 @@ struct Xoroshiro128StarStar:
     fn reset(inout self):
         """Start the sequence over using the current seed value."""
         var seedr = SplitMix(self.seed)
+        for _ in range(1e3):
+            seedr.step()
         self.s0 = seedr.next()
         self.s1 = seedr.next()
 
-    fn reseed(inout self, seed: UInt64):
+    fn reseed(inout self, seed: Self.SeedType):
         """Set a new seed and reset the generator."""
         self.seed = seed
         self.reset()
 
-    fn get_seed(self) -> UInt64:
+    fn get_seed(self) -> Self.SeedType:
         """Return the current seed value."""
         return self.seed
 
@@ -245,7 +257,7 @@ struct Xoroshiro128StarStar:
         self.s1 = rotate_bits_left[37](self.s1)
 
     @always_inline
-    fn next(inout self) -> UInt64:
+    fn next(inout self) -> Self.ValueType:
         """Return the next value in the sequence."""
         var res = rotate_bits_left[7](self.s0 * 5) * 9
         self.step()

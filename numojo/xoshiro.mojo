@@ -38,7 +38,9 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
     """Engine for xoshiro generators with 256-bits of state."""
 
     alias StateType = UInt64
-
+    alias ValueType = UInt64
+    alias SeedType = UInt64
+ 
     var seed: UInt64
     var s0: Self.StateType
     var s1: Self.StateType
@@ -54,7 +56,7 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
         self.seed = now()
         self.reset()
 
-    fn __init__(inout self, seed: UInt64):
+    fn __init__(inout self, seed: Self.SeedType):
         """Seed with provided value."""
         self.s0 = 0
         self.s1 = 0
@@ -66,17 +68,18 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
     fn reset(inout self):
          """Start the sequence over using the current seed value."""
         var seedr = SplitMix(self.seed)
+        for _ in range(1e3): seedr.step()
         self.s0 = seedr.next()
         self.s1 = seedr.next()
         self.s2 = seedr.next()
         self.s3 = seedr.next()
 
-    fn reseed(inout self, seed: UInt64):
+    fn reseed(inout self, seed: Self.SeedType):
         """Set a new seed and reset the generator."""
         self.seed = seed
         self.reset()
 
-    fn get_seed(self) -> UInt64:
+    fn get_seed(self) -> Self.SeedType:
         """Return the current seed value."""
         return self.seed
 
@@ -92,7 +95,7 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
         self.s3 = rotate_bits_left[45](self.s3)
 
     @always_inline
-    fn next(inout self) -> UInt64:
+    fn next(inout self) -> Self.ValueType:
         """Return the next value in the sequence."""
         var res = scrambler(self.s0, self.s1, self.s2, self.s3)
         self.step()
@@ -193,8 +196,10 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
     """Compute n parallel streams."""
 
     alias StateType = SIMD[DType.uint64, n]
+    alias ValueType = Self.StateType
+    alias SeedType = UInt64
 
-    var seed: UInt64
+    var seed: Self.SeedType
     
     var s0: Self.StateType
     var s1: Self.StateType
@@ -210,7 +215,7 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
         self.seed = now()
         self.reset()
 
-    fn __init__(inout self, seed: UInt64):
+    fn __init__(inout self, seed: Self.SeedType):
         """Seed with provided value."""
         self.s0 = 0
         self.s1 = 0
@@ -229,6 +234,7 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
             returned as n-values in a SIMD.
         """
         var seedr = Xoshiro256PlusPlus(self.seed)
+        for _ in range(1e3): seedr.step()
         for i in range(n):
             self.s0[i] = seedr.s0
             self.s1[i] = seedr.s1
@@ -236,12 +242,12 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
             self.s3[i] = seedr.s3
             seedr.long_jump()
 
-    fn reseed(inout self, seed: UInt64):
+    fn reseed(inout self, seed: Self.SeedType):
         """Set a new seed and reset the generator."""
         self.seed = seed
         self.reset()
 
-    fn get_seed(self) -> UInt64:
+    fn get_seed(self) -> Self.SeedType:
         """Return the current seed value."""
         return self.seed
 
@@ -261,7 +267,7 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
         self.s3 = rotate_bits_left[45](self.s3)
 
     @always_inline
-    fn next(inout self) -> Self.StateType:
+    fn next(inout self) -> Self.ValueType:
         """Return the next value in the sequence.
         
             The nth stream value will be in result[n - 1].
@@ -274,7 +280,7 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
         """Jump forward in the sequence.
         
             Using this method may not result in
-            independent streams.
+            non-overlapping streams.
         """
         var jumpr = Xoshiro256PlusPlus()
         for i in range(n):
@@ -293,7 +299,7 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
         """Jump forward in the sequence.
         
             Using this method may not result in
-            independent streams.
+            non-overlapping streams.
         """
         var jumpr = Xoshiro256PlusPlus()
         for i in range(n):

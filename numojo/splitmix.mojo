@@ -66,8 +66,3 @@ struct SplitMix:
     @always_inline
     fn __call__(inout self) -> Self.ValueType:
         return self.next()
-
-    fn fill[k: Int](inout self, inout other: SIMD[DType.uint64, k]):
-        """Fill a SIMD with pseudo-random numbers."""
-        for i in range(k):
-            other[i] = self.next()
