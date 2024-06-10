@@ -69,7 +69,7 @@ fn bench_splitmix() -> Report:
 
 
 fn bench_xoroshiro128plus() -> Report:
-    var rng = Xoroshiro128plus()
+    var rng = Xoroshiro128Plus()
 
     fn doit() capturing:
         var x: UInt64 = 0
@@ -81,7 +81,7 @@ fn bench_xoroshiro128plus() -> Report:
 
 
 fn bench_xoroshiro128plusplus() -> Report:
-    var rng = Xoroshiro128plusplus()
+    var rng = Xoroshiro128PlusPlus()
 
     fn doit() capturing:
         var x: UInt64 = 0
@@ -93,7 +93,7 @@ fn bench_xoroshiro128plusplus() -> Report:
 
 
 fn bench_xoroshiro128starstar() -> Report:
-    var rng = Xoroshiro128starstar()
+    var rng = Xoroshiro128StarStar()
 
     fn doit() capturing:
         var x: UInt64 = 0
@@ -105,7 +105,7 @@ fn bench_xoroshiro128starstar() -> Report:
 
 
 fn bench_xoshiro256plus() -> Report:
-    var rng = Xoshiro256plus()
+    var rng = Xoshiro256Plus()
 
     fn doit() capturing:
         var x: UInt64 = 0
@@ -117,7 +117,7 @@ fn bench_xoshiro256plus() -> Report:
 
 
 fn bench_xoshiro256plusplus() -> Report:
-    var rng = Xoshiro256plusplus()
+    var rng = Xoshiro256PlusPlus()
 
     fn doit() capturing:
         var x: UInt64 = 0
@@ -129,7 +129,7 @@ fn bench_xoshiro256plusplus() -> Report:
 
 
 fn bench_xoshiro256starstar() -> Report:
-    var rng = Xoshiro256starstar()
+    var rng = Xoshiro256StarStar()
 
     fn doit() capturing:
         var x: UInt64 = 0
@@ -140,8 +140,20 @@ fn bench_xoshiro256starstar() -> Report:
     return run[doit]()
 
 
-fn bench_xoshiro256parallelplusplus() -> Report:
-    var rng = Xoshiro256ParallelPlusPlus()
+fn bench_xoshiro256plusplussimd4() -> Report:
+    var rng = Xoshiro256PlusPlusSIMD[4]()
+
+    fn doit() capturing:
+        var x: rng.StateType = 0
+        for _ in range(steps):
+            x = rng.next()
+            keep(x)
+
+    return run[doit]()
+
+
+fn bench_xoshiro256plusplussimd16() -> Report:
+    var rng = Xoshiro256PlusPlusSIMD[16]()
 
     fn doit() capturing:
         var x: rng.StateType = 0
@@ -203,7 +215,12 @@ fn main():
         "|",
     )
     print(
-        "| Numojo | xoshiro256ppp4 |",
-        bench_xoshiro256parallelplusplus().mean("ns") / steps,
+        "| Numojo | xoshiro256pp x 4 |",
+        bench_xoshiro256plusplussimd4().mean("ns") / steps,
+        "|",
+    )
+    print(
+        "| Numojo | xoshiro256pp x 16 |",
+        bench_xoshiro256plusplussimd16().mean("ns") / steps,
         "|",
     )

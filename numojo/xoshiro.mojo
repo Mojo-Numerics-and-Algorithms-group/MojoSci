@@ -36,11 +36,14 @@ fn xoshiro256_star_star(s0: UInt64, s1: UInt64, s2: UInt64, s3: UInt64) -> UInt6
 @register_passable("trivial")
 struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
     """Engine for xoshiro generators with 256-bits of state."""
+
+    alias StateType = UInt64
+
     var seed: UInt64
-    var s0: UInt64
-    var s1: UInt64
-    var s2: UInt64 
-    var s3: UInt64 
+    var s0: Self.StateType
+    var s1: Self.StateType
+    var s2: Self.StateType 
+    var s3: Self.StateType 
 
     fn __init__(inout self):
         """Seed with current time."""
@@ -101,10 +104,10 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
         alias coefs1: UInt64 = 0xD5A61266F0C9392C
         alias coefs2: UInt64 = 0xA9582618E03FC9AA
         alias coefs3: UInt64 = 0x39ABDC4529B1661C
-        var s0: UInt64 = 0
-        var s1: UInt64 = 0
-        var s2: UInt64 = 0
-        var s3: UInt64 = 0
+        var s0: Self.StateType = 0
+        var s1: Self.StateType = 0
+        var s2: Self.StateType = 0
+        var s3: Self.StateType = 0
         for j in range(64):
             if coefs0 & (1 << j):
                 s0 ^= self.s0
@@ -144,11 +147,10 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
         alias coefs1: UInt64 = 0xC5004E441C522FB3
         alias coefs2: UInt64 = 0x77710069854EE241
         alias coefs3: UInt64 = 0x39109BB02ACBE635
-
-        var s0: UInt64 = 0
-        var s1: UInt64 = 0
-        var s2: UInt64 = 0
-        var s3: UInt64 = 0
+        var s0: Self.StateType = 0
+        var s1: Self.StateType = 0
+        var s2: Self.StateType = 0
+        var s3: Self.StateType = 0
         for j in range(64):
             if coefs0 & (1 << j):
                 s0 ^= self.s0
@@ -182,12 +184,12 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
         self.s2 = s2
         self.s3 = s3
 
-alias Xoshiro256plus = Xoshiro256[xoshiro256_plus]
-alias Xoshiro256plusplus = Xoshiro256[xoshiro256_plus_plus]
-alias Xoshiro256starstar = Xoshiro256[xoshiro256_star_star]
+alias Xoshiro256Plus = Xoshiro256[xoshiro256_plus]
+alias Xoshiro256PlusPlus = Xoshiro256[xoshiro256_plus_plus]
+alias Xoshiro256StarStar = Xoshiro256[xoshiro256_star_star]
 
 @register_passable("trivial")
-struct Xoshiro256ParallelPlusPlus[n: Int = 4]:
+struct Xoshiro256PlusPlusSIMD[n: Int]:
     """Compute n parallel streams."""
 
     alias StateType = SIMD[DType.uint64, n]
@@ -226,7 +228,7 @@ struct Xoshiro256ParallelPlusPlus[n: Int = 4]:
             This will result in independent streams, which will be
             returned as n-values in a SIMD.
         """
-        var seedr = Xoshiro256plusplus(self.seed)
+        var seedr = Xoshiro256PlusPlus(self.seed)
         for i in range(n):
             self.s0[i] = seedr.s0
             self.s1[i] = seedr.s1
@@ -274,7 +276,7 @@ struct Xoshiro256ParallelPlusPlus[n: Int = 4]:
             Using this method may not result in
             independent streams.
         """
-        var jumpr = Xoshiro256plusplus()
+        var jumpr = Xoshiro256PlusPlus()
         for i in range(n):
             jumpr.s0 = self.s0[i]
             jumpr.s1 = self.s1[i]
@@ -293,7 +295,7 @@ struct Xoshiro256ParallelPlusPlus[n: Int = 4]:
             Using this method may not result in
             independent streams.
         """
-        var jumpr = Xoshiro256plusplus()
+        var jumpr = Xoshiro256PlusPlus()
         for i in range(n):
             jumpr.s0 = self.s0[i]
             jumpr.s1 = self.s1[i]
