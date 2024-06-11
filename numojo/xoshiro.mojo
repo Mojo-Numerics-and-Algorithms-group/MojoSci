@@ -41,7 +41,7 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
     alias ValueType = UInt64
     alias SeedType = UInt64
  
-    var seed: UInt64
+    var seed: Self.SeedType
     var s0: Self.StateType
     var s1: Self.StateType
     var s2: Self.StateType 
@@ -67,15 +67,18 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
 
     fn reset(inout self):
          """Start the sequence over using the current seed value."""
-        var seedr = SplitMix(self.seed)
-        for _ in range(1e3): seedr.step()
+        var seedr = SplitMix(self.seed, 1000)
         self.s0 = seedr.next()
         self.s1 = seedr.next()
         self.s2 = seedr.next()
         self.s3 = seedr.next()
 
     fn reseed(inout self, seed: Self.SeedType):
-        """Set a new seed and reset the generator."""
+        """Set a new seed and reset the generator.
+        
+        The seed is used to initialize the SplitMix
+        generator. After 1000 warm up steps, SplitMix
+        is called 4 times to set the state."""
         self.seed = seed
         self.reset()
 
@@ -102,7 +105,10 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
         return res
 
     fn jump(inout self):
-        """Jump forward in the sequence."""
+        """Jump forward in the sequence.
+        
+        It is equivalent to 2^128 calls to step(); it can be used to generate 2^128
+        non-overlapping subsequences for parallel computations."""
         alias coefs0: UInt64 = 0x180EC6D33CFD0ABA
         alias coefs1: UInt64 = 0xD5A61266F0C9392C
         alias coefs2: UInt64 = 0xA9582618E03FC9AA
@@ -145,7 +151,12 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
         self.s3 = s3
 
     fn long_jump(inout self):
-        """Jump forward in the sequence."""
+        """Jump forward in the sequence.
+        
+        It is equivalent to 2^192 calls to step();
+        it can be used to generate 2^64 starting points,
+        from each of which jump() will generate 2^64 non-overlapping
+        subsequences for parallel distributed computations."""
         alias coefs0: UInt64 = 0x76E15D3EFEFDCBBF
         alias coefs1: UInt64 = 0xC5004E441C522FB3
         alias coefs2: UInt64 = 0x77710069854EE241
@@ -187,6 +198,11 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
         self.s2 = s2
         self.s3 = s3
 
+    @always_inline
+    fn __call__(inout self) -> Self.ValueType:
+        """Same as calling next()."""
+        return self.next()
+
 alias Xoshiro256Plus = Xoshiro256[xoshiro256_plus]
 alias Xoshiro256PlusPlus = Xoshiro256[xoshiro256_plus_plus]
 alias Xoshiro256StarStar = Xoshiro256[xoshiro256_star_star]
@@ -227,14 +243,12 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
     fn reset(inout self):
          """Start the sequence over using the current seed value.
          
-            The first stream is seeded just as Xoshiro256plusplus.
-            The other n-1 streams are seeded by taking a long jump
-            and assigning the jumped state to the next generator.
-            This will result in independent streams, which will be
-            returned as n-values in a SIMD.
-        """
+        The first stream is seeded just as Xoshiro256PlusPlus.
+        The other n-1 streams are seeded by taking a long jump
+        and assigning the jumped state to the next generator.
+        This will result in independent streams, which will be
+        returned as n-values in a SIMD."""
         var seedr = Xoshiro256PlusPlus(self.seed)
-        for _ in range(1e3): seedr.step()
         for i in range(n):
             self.s0[i] = seedr.s0
             self.s1[i] = seedr.s1
@@ -255,9 +269,8 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
     fn step(inout self):
         """Advance the generator by one step.
         
-            The streams are advanced in parallel
-            using SIMD operations.
-        """
+        The streams are advanced in parallel
+        using SIMD operations."""
         var t = self.s1 << 17
         self.s2 ^= self.s0
         self.s3 ^= self.s1
@@ -270,8 +283,7 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
     fn next(inout self) -> Self.ValueType:
         """Return the next value in the sequence.
         
-            The nth stream value will be in result[n - 1].
-        """
+        The nth stream value will be in result[n - 1]."""
         var res = rotate_bits_left[23](self.s0 + self.s3) + self.s0
         self.step()
         return res
@@ -279,9 +291,8 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
     fn jump(inout self):
         """Jump forward in the sequence.
         
-            Using this method may not result in
-            non-overlapping streams.
-        """
+        Using this method may not result in
+        non-overlapping streams."""
         var jumpr = Xoshiro256PlusPlus()
         for i in range(n):
             jumpr.s0 = self.s0[i]
@@ -298,9 +309,8 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
     fn long_jump(inout self):
         """Jump forward in the sequence.
         
-            Using this method may not result in
-            non-overlapping streams.
-        """
+        Using this method may not result in
+        non-overlapping streams."""
         var jumpr = Xoshiro256PlusPlus()
         for i in range(n):
             jumpr.s0 = self.s0[i]
@@ -312,5 +322,11 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
             self.s1[i] = jumpr.s1
             self.s2[i] = jumpr.s2
             self.s3[i] = jumpr.s3
+
+    @always_inline
+    fn __call__(inout self) -> Self.ValueType:
+        """Same as calling next()."""
+        return self.next()
+
 
 

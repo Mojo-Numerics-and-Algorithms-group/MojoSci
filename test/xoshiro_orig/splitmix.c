@@ -30,6 +30,7 @@ uint64_t next() {
 
 int main() {
     x = 123456789;
+    for (int i = 0; i != 1e3; ++i) next();
     printf("%llu\n", next());
     printf("%llu\n", next());
     printf("%llu\n", next());

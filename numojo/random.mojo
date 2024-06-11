@@ -37,12 +37,3 @@ struct PRNG[T: PRNGEngine]:
         var a: Float64 = self.uniform(min=1e-7)
         var b: Float64 = self.uniform()
         return sd * sqrt(-2 * log(a)) * cos(pi2 * b) + mean
-
-
-from numojo.splitmix import SplitMix
-
-
-fn main():
-    var eng = SplitMix()
-    var rng = PRNG(eng)
-    print(rng.normal())

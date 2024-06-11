@@ -26,24 +26,39 @@ struct SplitMix:
     var seed: Self.SeedType
     var state: Self.StateType
 
-    fn __init__(inout self):
-        """Seed with current time."""
+    fn __init__(inout self, warmup: Int = 0):
+        """Seed with current time.
+        
+        Arguments:
+            warmup -- advance the state this many times."""
+        self.state = 0
         self.seed = now()
-        self.state = self.seed
+        self.reset(warmup)
 
-    fn __init__(inout self, seed: Self.SeedType):
-        """Seed with provided value."""
+    fn __init__(inout self, seed: Self.SeedType, warmup: Int = 0):
+        """Seed with provided value.
+        
+        Arguments:
+            warmup -- advance the state this many times."""
+        self.state = 0
         self.seed = seed
-        self.state = seed
+        self.reset(warmup)
 
-    fn reset(inout self):
-        """Start the sequence over using the current seed value."""
+    fn reset(inout self, warmup: Int = 0):
+        """Start the sequence over using the current seed value.
+        
+        Arguments:
+            warmup -- advance the state this many times."""
         self.state = self.seed
+        self.step(warmup)
 
-    fn reseed(inout self, seed: Self.SeedType):
-        """Set a new seed and reset the generator."""
+    fn reseed(inout self, seed: Self.SeedType, warmup: Int = 0):
+        """Set a new seed and reset the generator.
+        
+        Arguments:
+            warmup -- advance the state this many times."""
         self.seed = seed
-        self.reset()
+        self.reset(warmup)
 
     fn get_seed(self) -> Self.SeedType:
         """Return the current seed value."""
@@ -52,7 +67,13 @@ struct SplitMix:
     @always_inline
     fn step(inout self):
         """Advance the generator by one step."""
-        self.state += 0x9E3779B97F4A7C15
+            self.state += 0x9E3779B97F4A7C15
+
+    @always_inline
+    fn step(inout self, times: Int):
+        """Advance the generator by times steps."""
+        for _ in range(times):
+            self.state += 0x9E3779B97F4A7C15
 
     @always_inline
     fn next(inout self) -> Self.ValueType:
@@ -65,4 +86,5 @@ struct SplitMix:
 
     @always_inline
     fn __call__(inout self) -> Self.ValueType:
+        """Same as calling next()."""
         return self.next()

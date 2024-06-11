@@ -18,7 +18,7 @@ from numojo.splitmix import SplitMix
 
 @register_passable("trivial")
 struct Xoroshiro128Plus:
-    """Xoroshiro128plus generator."""
+    """Xoroshiro128Plus generator."""
 
     alias StateType = UInt64
     alias ValueType = UInt64
@@ -43,10 +43,11 @@ struct Xoroshiro128Plus:
         self.reset()
 
     fn reset(inout self):
-        """Start the sequence over using the current seed value."""
-        var seedr = SplitMix(self.seed)
-        for _ in range(1e3):
-            seedr.step()
+        """Start the sequence over using the current seed value.
+
+        The state is seeded by the SplitMix generator after 1000
+        warm up iterations."""
+        var seedr = SplitMix(self.seed, 1000)
         self.s0 = seedr.next()
         self.s1 = seedr.next()
 
@@ -74,7 +75,11 @@ struct Xoroshiro128Plus:
         return res
 
     fn jump(inout self):
-        """Jump forward in the sequence."""
+        """Jump forward in the sequence.
+
+        It is equivalent
+        to 2^64 calls to step(); it can be used to generate 2^64
+        non-overlapping subsequences for parallel computations."""
         alias coefs0: UInt64 = 0xDF900294D8F554A5
         alias coefs1: UInt64 = 0x170865DF4B3201FC
         var s0: Self.StateType = 0
@@ -93,7 +98,12 @@ struct Xoroshiro128Plus:
         self.s1 = s1
 
     fn long_jump(inout self):
-        """Jump forward in the sequence."""
+        """Jump forward in the sequence.
+
+        It is equivalent to
+        2^96 calls to step(); it can be used to generate 2^32 starting points,
+        from each of which jump() will generate 2^32 non-overlapping
+        subsequences for parallel distributed computations."""
         alias coefs0: UInt64 = 0xD2A98B26625EEE7B
         alias coefs1: UInt64 = 0xDDDF9B1090AA7AC1
         var s0: Self.StateType = 0
@@ -110,6 +120,11 @@ struct Xoroshiro128Plus:
             self.step()
         self.s0 = s0
         self.s1 = s1
+
+    @always_inline
+    fn __call__(inout self) -> Self.ValueType:
+        """Same as calling next()."""
+        return self.next()
 
 
 struct Xoroshiro128PlusPlus:
@@ -138,10 +153,11 @@ struct Xoroshiro128PlusPlus:
         self.reset()
 
     fn reset(inout self):
-        """Start the sequence over using the current seed value."""
-        var seedr = SplitMix(self.seed)
-        for _ in range(1e6):
-            seedr.step()
+        """Start the sequence over using the current seed value.
+
+        The state is seeded by the SplitMix generator after 1000
+        warm up iterations."""
+        var seedr = SplitMix(self.seed, 1000)
         self.s0 = seedr.next()
         self.s1 = seedr.next()
 
@@ -169,7 +185,11 @@ struct Xoroshiro128PlusPlus:
         return res
 
     fn jump(inout self):
-        """Jump forward in the sequence."""
+        """Jump forward in the sequence.
+
+        It is equivalent
+        to 2^64 calls to step(); it can be used to generate 2^64
+        non-overlapping subsequences for parallel computations."""
         alias coefs0: UInt64 = 0x2BD7A6A6E99C2DDC
         alias coefs1: UInt64 = 0x0992CCAF6A6FCA05
         var s0: Self.StateType = 0
@@ -188,7 +208,12 @@ struct Xoroshiro128PlusPlus:
         self.s1 = s1
 
     fn long_jump(inout self):
-        """Jump forward in the sequence."""
+        """Jump forward in the sequence.
+
+        It is equivalent to
+        2^96 calls to step(); it can be used to generate 2^32 starting points,
+        from each of which jump() will generate 2^32 non-overlapping
+        subsequences for parallel distributed computations."""
         alias coefs0: UInt64 = 0x360FD5F2CF8D5D99
         alias coefs1: UInt64 = 0x9C6E6877736C46E3
         var s0: Self.StateType = 0
@@ -205,6 +230,11 @@ struct Xoroshiro128PlusPlus:
             self.step()
         self.s0 = s0
         self.s1 = s1
+
+    @always_inline
+    fn __call__(inout self) -> Self.ValueType:
+        """Same as calling next()."""
+        return self.next()
 
 
 struct Xoroshiro128StarStar:
@@ -233,10 +263,11 @@ struct Xoroshiro128StarStar:
         self.reset()
 
     fn reset(inout self):
-        """Start the sequence over using the current seed value."""
-        var seedr = SplitMix(self.seed)
-        for _ in range(1e3):
-            seedr.step()
+        """Start the sequence over using the current seed value.
+
+        The state is seeded by the SplitMix generator after 1000
+        warm up iterations."""
+        var seedr = SplitMix(self.seed, 1000)
         self.s0 = seedr.next()
         self.s1 = seedr.next()
 
@@ -264,7 +295,11 @@ struct Xoroshiro128StarStar:
         return res
 
     fn jump(inout self):
-        """Jump forward in the sequence."""
+        """Jump forward in the sequence.
+
+        It is equivalent
+        to 2^64 calls to step(); it can be used to generate 2^64
+        non-overlapping subsequences for parallel computations."""
         alias coefs0: UInt64 = 0xDF900294D8F554A5
         alias coefs1: UInt64 = 0x170865DF4B3201FC
         var s0: Self.StateType = 0
@@ -283,7 +318,12 @@ struct Xoroshiro128StarStar:
         self.s1 = s1
 
     fn long_jump(inout self):
-        """Jump forward in the sequence."""
+        """Jump forward in the sequence.
+
+        It is equivalent to
+        2^96 calls to step(); it can be used to generate 2^32 starting points,
+        from each of which jump() will generate 2^32 non-overlapping
+        subsequences for parallel distributed computations."""
         alias coefs0: UInt64 = 0xD2A98B26625EEE7B
         alias ceofs1: UInt64 = 0xDDDF9B1090AA7AC1
         var s0: Self.StateType = 0
@@ -300,3 +340,8 @@ struct Xoroshiro128StarStar:
             self.step()
         self.s0 = s0
         self.s1 = s1
+
+    @always_inline
+    fn __call__(inout self) -> Self.ValueType:
+        """Same as calling next()."""
+        return self.next()

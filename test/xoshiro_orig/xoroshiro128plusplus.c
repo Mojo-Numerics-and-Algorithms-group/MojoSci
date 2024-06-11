@@ -118,6 +118,7 @@ void long_jump(void) {
 
 int main() {
 	x = 123456789;
+	for(int i = 0; i < 1e3; ++i) next_x();
 	s[0] = next_x();
 	s[1] = next_x();
 	printf("%llu\n", next());
