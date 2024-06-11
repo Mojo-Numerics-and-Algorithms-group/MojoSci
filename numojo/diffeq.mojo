@@ -91,20 +91,20 @@ alias Fehlberg45_Nodes = RowVec[6](0, 1 / 4, 3 / 8, 12 / 13, 1, 1 / 2)
 
 
 fn diffeq_steps[
-    dim: Int, coefs: Mat[dim, dim], nodes: RowVec[dim], srows: Int, scols: Int
+    sys_dim: Int, steps: Int, coefs: Mat[steps, steps], nodes: RowVec[steps]
 ](
     t: Float64,
     dt: Float64,
-    s: Mat[srows, scols],
-    diff: fn (Float64, Mat[srows, scols], List[Float64]) -> Float64,
+    s: ColVec[sys_dim],
+    diff: fn (Float64, ColVec[sys_dim], List[Float64]) -> ColVec[sys_dim],
     pars: List[Float64],
-    inout k: RowVec[dim],
+    inout k: Mat[sys_dim, steps],
 ) raises:
     var knots = t + nodes * dt
 
     @parameter
     for i in range(len(nodes)):
-        var s_proj = s + (k @ coefs.get_col(i))[0]
+        var s_proj: ColVec[sys_dim] = s + k @ coefs.get_col(i)
         k[i] = diff(knots[i], s_proj, pars)
 
 

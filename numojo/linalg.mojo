@@ -21,96 +21,122 @@ from math import isclose
 struct StaticMat[rows: Int, cols: Int](Sized):
     """A fixed-size small-matrix type."""
 
-    alias element_type = Float64
+    alias ElementType = Float64
     alias storage_size = rows * cols
-    alias storage_type = StaticTuple[Self.element_type, Self.storage_size]
-    var elements: Self.storage_type
+    alias StorageType = StaticTuple[Self.ElementType, Self.storage_size]
+    var elements: Self.StorageType
+
+    # ==========================================
+    # Initializations
+    # ==========================================
 
     @always_inline
     fn __init__(inout self):
+        """Evoke default initializer for StaticTuple."""
         constrained[
             self.storage_size > 0, "Matrix size must be greater than zero."
         ]()
-        self.elements = self.storage_type()
+        self.elements = Self.StorageType()
 
     @always_inline
-    fn __init__(inout self, fill: self.element_type):
+    fn __init__(inout self, fill: Self.ElementType):
+        """Initialize matrix and set elements to fill value."""
         constrained[
             self.storage_size > 0, "Matrix size must be greater than zero."
         ]()
-        self.elements = self.storage_type()
+        self.elements = Self.StorageType()
         self.fill(fill)
 
     @always_inline
-    fn __init__(inout self, generator: fn () -> Self.element_type):
+    fn __init__(inout self, generator: fn () -> Self.ElementType):
+        """"Initialize matrix and use generator to fill values."""
         constrained[
             self.storage_size > 0, "Matrix size must be greater than zero."
         ]()
-        self.elements = self.storage_type()
+        self.elements = Self.StorageType()
         self.fill(generator)
 
     @always_inline
-    fn __init__(inout self, *elems: Self.element_type):
-        self.elements = self.storage_type(elems)
+    """Initialize matrix and fill from list of arguments."""
+    fn __init__(inout self, *elems: Self.ElementType):
+        self.elements = Self.StorageType(elems)
 
     @always_inline
-    fn __init__(inout self, values: VariadicList[Self.element_type]):
-        self.elements = self.storage_type(values)
+    fn __init__(inout self, values: VariadicList[Self.ElementType]):
+        """Initialize matrix and fill from variadic list of values."""
+        self.elements = Self.StorageType(values)
+
+    # ==========================================
+    # Sized trait
+    # ==========================================
 
     @always_inline
-    fn fill(inout self, value: Self.element_type):
+    fn __len__(self) -> Int:
+        return self.storage_size
+
+    # ==========================================
+    # Runtime modification
+    # ==========================================
+
+    @always_inline
+    fn fill(inout self, value: Self.ElementType):
         @parameter
         for i in range(self.storage_size):
             self.elements[i] = value
 
     @always_inline
-    fn fill(inout self, generator: fn () -> Self.element_type):
+    fn fill(inout self, generator: fn () -> Self.ElementType):
         @parameter
         for i in range(self.storage_size):
             self.elements[i] = generator()
 
     @always_inline
-    fn set_diag(inout self, value: Self.element_type):
+    fn set_diag(inout self, value: Self.ElementType):
         alias diag_len = min(rows, cols)
 
         @parameter
         for i in range(diag_len):
-            self.elements[self.pos[i, i]()] = value
+            self.set[i, i](value)
 
-    @staticmethod
-    fn diag(value: Self.element_type = 1) -> Self:
-        var res = Self(0)
-        res.set_diag(value)
-        return res
+    # ==========================================
+    # Run-time indexed access
+    # ==========================================
 
     @always_inline
-    fn __getitem__(self, index: Int) raises -> self.element_type:
+    fn pos(self, row: Int, col: Int) -> Int:
+        """Return linear element position."""
+        return col * rows + row
+
+    @always_inline
+    fn __getitem__(self, index: Int) raises -> Self.ElementType:
+        """Get element at storage position."""
         if index < 0 or index > self.storage_size:
             raise Error("Index out of bounds")
         return self.elements[index]
 
     @always_inline
-    fn __setitem__(inout self, index: Int, value: self.element_type) raises:
-        if index < 0 or index > self.storage_size:
-            raise Error("Index out of bounds")
-        self.elements[index] = value
-
-    @always_inline
-    fn __getitem__(self, row: Int, col: Int) raises -> self.element_type:
+    fn __getitem__(self, row: Int, col: Int) raises -> Self.ElementType:
+        """Get element by row and column indices."""
         if row < 0 or row > rows or col < 0 or col > cols:
             raise Error("Index out of bounds")
         return self.elements[self.pos(row, col)]
 
     @always_inline
-    fn __setitem__(
-        inout self, row: Int, col: Int, value: self.element_type
-    ) raises:
-        if row < 0 or row > rows or col < 0 or col > cols:
+    fn get_row(self, row: Int) raises -> StaticRowVec[cols]:
+        """Return a row of elements."""
+        if row < 0 or row > rows:
             raise Error("Index out of bounds")
-        self.elements[self.pos(row, col)] = value
+        var res = StaticRowVec[cols]()
 
+        @parameter
+        for i in range(cols):
+            res.elements[i] = self.elements[self.pos(row, i)]
+
+        return res
+        
     @always_inline
     fn get_col(self, col: Int) raises -> StaticColVec[rows]:
+        """Return a column of elements."""
         if col < 0 or col > cols:
             raise Error("Index out of bounds")
         var res = StaticColVec[rows]()
@@ -121,6 +147,56 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
         return res
 
+    # ==========================================
+    # Run-time indexed modification
+    # ==========================================
+
+    @always_inline
+    fn __setitem__(inout self, index: Int, value: Self.ElementType) raises:
+        if index < 0 or index > self.storage_size:
+            raise Error("Index out of bounds")
+        self.elements[index] = value
+
+    @always_inline
+    fn __setitem__(
+        inout self, row: Int, col: Int, value: Self.ElementType
+    ) raises:
+        if row < 0 or row > rows or col < 0 or col > cols:
+            raise Error("Index out of bounds")
+        self.elements[self.pos(row, col)] = value
+
+    @always_inline
+    fn swap_rows[cstart: Int = 0, cend: Int = cols](inout self, row1: Int, row2: Int):
+        @parameter
+        for col in range(cstart, cend):
+            swap(
+                self.elements[self.pos(row1, col)],
+                self.elements[self.pos(row2, col)],
+            )
+
+    @always_inline
+    fn swap_cols[rstart: Int = 0, rend: Int = rows](inout self, col1: Int, col2: Int):
+        @parameter
+        for row in range(rstart, rend):
+            swap(
+                self.elements[self.pos(row, col1)],
+                self.elements[self.pos(row, col2)],
+            )
+
+    # ==========================================
+    # Compile-time indexed access
+    # ==========================================
+
+    @always_inline
+    fn pos[row: Int, col: Int](self) -> Int:
+        constrained[row >= 0 and row < rows, "Row index out of bounds"]()
+        constrained[col >= 0 and col < cols, "Col index out of bounds"]()
+        return col * rows + row
+
+    @always_inline
+    fn get[row: Int, col: Int](self) -> Self.ElementType:
+        return self.elements[self.pos[row, col]()]
+
     @always_inline
     fn get_col[col: Int](self) -> StaticColVec[rows]:
         var res = StaticColVec[rows]()
@@ -128,18 +204,6 @@ struct StaticMat[rows: Int, cols: Int](Sized):
         @parameter
         for row in range(rows):
             res.set[row, 1](self.get[row, col]())
-
-        return res
-
-    @always_inline
-    fn get_row(self, row: Int) raises -> StaticRowVec[cols]:
-        if row < 0 or row > rows:
-            raise Error("Index out of bounds")
-        var res = StaticRowVec[cols]()
-
-        @parameter
-        for i in range(cols):
-            res.elements[i] = self.elements[self.pos(row, i)]
 
         return res
 
@@ -153,9 +217,86 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
         return res
 
+    # ==========================================
+    # Compile-time indexed modification
+    # ==========================================
+
     @always_inline
-    fn __len__(self) -> Int:
-        return self.storage_size
+    fn set[row: Int, col: Int](inout self, value: Self.ElementType):
+        self.elements[self.pos[row, col]()] = value
+
+    @always_inline
+    fn set_row[row: Int](inout self, value: StaticRowVec[cols]):
+        @parameter
+        for col in range(cols):
+            self.set[row, col](value.get[0, col]())
+
+    @always_inline
+    fn set_col[col: Int](inout self, value: StaticColVec[rows]):
+        @parameter
+        for row in range(rows):
+            self.set[row, col](value.get[row, 0]())
+
+    @always_inline
+    fn swap_rows[first: Int, second: Int](inout self):
+        @parameter
+        for col in range(cols):
+            var tmp = self.get[first, col]()
+            self.set[first, col](self.get[second, col]())
+            self.set[second, col](tmp)
+
+    @always_inline
+    fn swap_cols[first: Int, second: Int](inout self):
+        @parameter
+        for row in range(rows):
+            var tmp = self.get[row, first]()
+            self.set[row, first](self.get[row, second]())
+            self.set[row, second](tmp)
+
+    # ==========================================
+    # Matrix builders
+    # ==========================================
+
+    @staticmethod
+    fn diag(value: Self.ElementType = 1) -> Self:
+        """Create diagonal matrix of matching dimensions."""
+        var res = Self(0)
+        res.set_diag(value)
+        return res
+
+    @staticmethod
+    fn zeros() -> Self:
+        """Create zeros matrix of matching dimensions."""
+        return Self(0)
+
+    @staticmethod
+    fn zeros_col() -> StaticColVec[rows]:
+        """Create zeros matrix of matching dimensions."""
+        return StaticColVec[rows](0)
+
+    @staticmethod
+    fn zeros_row() -> StaticRowVec[cols]:
+        """Create zeros matrix of matching dimensions."""
+        return StaticRowVec[cols](0)
+
+    @staticmethod
+    fn ones() -> Self:
+        """Create zeros matrix of matching dimensions."""
+        return Self(1)
+    
+    @staticmethod
+    fn ones_col() -> StaticColVec[rows]:
+        """Create zeros matrix of matching dimensions."""
+        return StaticColVec[rows](1)
+
+    @staticmethod
+    fn ones_row() -> StaticRowVec[cols]:
+        """Create zeros matrix of matching dimensions."""
+        return StaticRowVec[cols](1)
+
+    # ==========================================
+    # Predicates
+    # ==========================================
 
     @always_inline
     fn __eq__(self, other: Self) -> Bool:
@@ -170,6 +311,10 @@ struct StaticMat[rows: Int, cols: Int](Sized):
     @always_inline
     fn __ne__(self, other: Self) -> Bool:
         return ~self.__eq__(other)
+
+    # ==========================================
+    # Elementwise operators
+    # ==========================================
 
     @always_inline
     fn __add__(self, other: Self) -> Self:
@@ -202,8 +347,102 @@ struct StaticMat[rows: Int, cols: Int](Sized):
         return res
 
     @always_inline
-    fn pos(self, row: Int, col: Int) -> Int:
-        return col * rows + row
+    fn __truediv__(self, other: Self) -> Self:
+        var res = Self()
+
+        @parameter
+        for i in range(self.storage_size):
+            res.elements[i] = self.elements[i] / other.elements[i]
+
+        return res
+
+    # ==========================================
+    # Scalar operators
+    # ==========================================
+
+    @always_inline
+    fn __add__(self, other: Self.ElementType) -> Self:
+        var res = Self()
+
+        @parameter
+        for i in range(self.storage_size):
+            res.elements[i] = self.elements[i] + other
+
+        return res
+
+    @always_inline
+    fn __sub__(self, other: Self.ElementType) -> Self:
+        var res = Self()
+
+        @parameter
+        for i in range(self.storage_size):
+            res.elements[i] = self.elements[i] - other
+
+        return res
+
+    @always_inline
+    fn __mul__(self, other: Self.ElementType) -> Self:
+        var res = Self()
+
+        @parameter
+        for i in range(self.storage_size):
+            res.elements[i] = self.elements[i] * other
+
+        return res
+
+    @always_inline
+    fn __truediv__(self, other: Self.ElementType) -> Self:
+        var res = Self()
+
+        @parameter
+        for i in range(self.storage_size):
+            res.elements[i] = self.elements[i] / other
+
+        return res
+
+    @always_inline
+    fn __radd__(self, other: Self.ElementType) -> Self:
+        var res = Self()
+
+        @parameter
+        for i in range(self.storage_size):
+            res.elements[i] = self.elements[i] + other
+
+        return res
+
+    @always_inline
+    fn __rsub__(self, other: Self.ElementType) -> Self:
+        var res = Self()
+
+        @parameter
+        for i in range(self.storage_size):
+            res.elements[i] = other - self.elements[i]
+
+        return res
+
+    @always_inline
+    fn __rmul__(self, other: Self.ElementType) -> Self:
+        var res = Self()
+
+        @parameter
+        for i in range(self.storage_size):
+            res.elements[i] = self.elements[i] * other
+
+        return res
+
+    @always_inline
+    fn __rtruediv__(self, other: Self.ElementType) -> Self:
+        var res = Self()
+
+        @parameter
+        for i in range(self.storage_size):
+            res.elements[i] = other / self.elements[i]
+
+        return res
+
+    # ==========================================
+    # Matrix operators
+    # ==========================================
 
     @always_inline
     fn __matmul__(self, other: StaticMat) -> StaticMat[rows, other.cols]:
@@ -225,146 +464,13 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
         return res
 
-    @always_inline
-    fn __truediv__(self, other: Self) -> Self:
-        var res = Self()
-
-        @parameter
-        for i in range(self.storage_size):
-            res.elements[i] = self.elements[i] / other.elements[i]
-
-        return res
-
-    @always_inline
-    fn __add__(self, other: self.element_type) -> Self:
-        var res = Self()
-
-        @parameter
-        for i in range(self.storage_size):
-            res.elements[i] = self.elements[i] + other
-
-        return res
-
-    @always_inline
-    fn __sub__(self, other: self.element_type) -> Self:
-        var res = Self()
-
-        @parameter
-        for i in range(self.storage_size):
-            res.elements[i] = self.elements[i] - other
-
-        return res
-
-    @always_inline
-    fn __mul__(self, other: self.element_type) -> Self:
-        var res = Self()
-
-        @parameter
-        for i in range(self.storage_size):
-            res.elements[i] = self.elements[i] * other
-
-        return res
-
-    @always_inline
-    fn __truediv__(self, other: self.element_type) -> Self:
-        var res = Self()
-
-        @parameter
-        for i in range(self.storage_size):
-            res.elements[i] = self.elements[i] / other
-
-        return res
-
-    @always_inline
-    fn __radd__(self, other: self.element_type) -> Self:
-        var res = Self()
-
-        @parameter
-        for i in range(self.storage_size):
-            res.elements[i] = self.elements[i] + other
-
-        return res
-
-    @always_inline
-    fn __rsub__(self, other: self.element_type) -> Self:
-        var res = Self()
-
-        @parameter
-        for i in range(self.storage_size):
-            res.elements[i] = other - self.elements[i]
-
-        return res
-
-    @always_inline
-    fn __rmul__(self, other: self.element_type) -> Self:
-        var res = Self()
-
-        @parameter
-        for i in range(self.storage_size):
-            res.elements[i] = self.elements[i] * other
-
-        return res
-
-    @always_inline
-    fn __rtruediv__(self, other: self.element_type) -> Self:
-        var res = Self()
-
-        @parameter
-        for i in range(self.storage_size):
-            res.elements[i] = other / self.elements[i]
-
-        return res
-
-    @always_inline
-    fn pos[row: Int, col: Int](self) -> Int:
-        constrained[row >= 0 and row < rows, "Row index out of bounds"]()
-        constrained[col >= 0 and col < cols, "Col index out of bounds"]()
-        return col * rows + row
-
-    @always_inline
-    fn get[row: Int, col: Int](self) -> Self.element_type:
-        return self.elements[self.pos[row, col]()]
-
-    @always_inline
-    fn set[row: Int, col: Int](inout self, value: Self.element_type):
-        self.elements[self.pos[row, col]()] = value
-
-    @always_inline
-    fn swap_rows[first: Int, second: Int](inout self):
-        @parameter
-        for col in range(cols):
-            var tmp = self.get[first, col]()
-            self.set[first, col](self.get[second, col]())
-            self.set[second, col](tmp)
-
-    @always_inline
-    fn swap_rows[c1: Int = 0, c2: Int = cols](inout self, r1: Int, r2: Int):
-        @parameter
-        for col in range(c1, c2):
-            swap(
-                self.elements[self.pos(r1, col)],
-                self.elements[self.pos(r2, col)],
-            )
-
-    @always_inline
-    fn swap_cols[first: Int, second: Int](inout self):
-        @parameter
-        for row in range(rows):
-            var tmp = self.get[row, first]()
-            self.set[row, first](self.get[row, second]())
-            self.set[row, second](tmp)
-
-    @always_inline
-    fn swap_cols(inout self, first: Int, second: Int):
-        @parameter
-        for row in range(rows):
-            swap(
-                self.elements[self.pos(row, first)],
-                self.elements[self.pos(row, second)],
-            )
+    # ==========================================
+    # Matrix transforms
+    # ==========================================
 
     @always_inline
     fn transpose(self) -> StaticMat[cols, rows]:
+        """Return the matrix with rows and columns swapped."""
         var res = StaticMat[cols, rows]()
 
         @parameter
@@ -421,6 +527,9 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
         return (P, L, U)
 
+# ==========================================
+# Vector types
+# ==========================================
 
 alias StaticRowVec = StaticMat[1, _]
 alias StaticColVec = StaticMat[_, 1]

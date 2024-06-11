@@ -1,7 +1,8 @@
 from benchmark import *
 from numojo.linalg import *
 from numojo.splitmix import *
-from python import numpy as np
+
+# from python import numpy as np
 
 
 fn bench_mat_mat_mult[rows: Int, cols: Int]() raises -> Report:
