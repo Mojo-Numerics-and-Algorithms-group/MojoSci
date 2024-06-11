@@ -17,25 +17,25 @@ from numojo.linalg import StaticMat, StaticRowVec, StaticColVec
 alias RK4_Coefs = StaticMat[4, 4](
     0, 0, 0, 0, 1 / 2, 0, 0, 0, 0, 1 / 2, 0, 0, 0, 0, 1, 0
 )
-alias RK4_Weights = StaticRowVec[4](1 / 6, 1 / 3, 1 / 3, 1 / 6)
+alias RK4_Weights = StaticColVec[4](1 / 6, 1 / 3, 1 / 3, 1 / 6)
 alias RK4_Nodes = StaticRowVec[4](0, 1 / 2, 1 / 2, 1)
 
 alias RK38_Coefs = StaticMat[4, 4](
     0, 0, 0, 0, 1 / 3, 0, 0, 0, -1 / 3, 1, 0, 0, 1, -1, 1, 0
 )
-alias RK38_Weights = StaticRowVec[4](1 / 8, 3 / 8, 3 / 8, 1 / 8)
+alias RK38_Weights = StaticColVec[4](1 / 8, 3 / 8, 3 / 8, 1 / 8)
 alias RK38_Nodes = StaticRowVec[4](0, 1 / 3, 2 / 3, 1)
 
 alias MidPoint_Coefs = StaticMat[2, 2](0, 0, 1 / 2, 0)
-alias MidPoint_Weights = StaticRowVec[2](0, 1)
+alias MidPoint_Weights = StaticColVec[2](0, 1)
 alias MidPoint_Nodes = StaticRowVec[2](0, 1 / 2)
 
 alias Heun_Coefs = StaticMat[2, 2](0, 0, 1, 0)
-alias Heun_Weights = StaticRowVec[2](1 / 2, 1 / 2)
+alias Heun_Weights = StaticColVec[2](1 / 2, 1 / 2)
 alias Heun_Nodes = StaticRowVec[2](0, 1)
 
 alias Ralston_Coefs = StaticMat[2, 2](0, 0, 2 / 3, 0)
-alias Ralston_Weights = StaticRowVec[2](1 / 4, 3 / 4)
+alias Ralston_Weights = StaticColVec[2](1 / 4, 3 / 4)
 alias Ralston_Nodes = StaticRowVec[2](0, 2 / 3)
 
 alias Fehlberg45_Coefs = StaticMat[6, 6](
@@ -76,7 +76,7 @@ alias Fehlberg45_Coefs = StaticMat[6, 6](
     -11 / 40,  # 5, 4
     0,  # 5, 5
 )
-alias Fehlberg4_Weights = StaticRowVec[6](
+alias Fehlberg4_Weights = StaticColVec[6](
     25 / 216,
     0,
     1408 / 2565,
@@ -84,7 +84,7 @@ alias Fehlberg4_Weights = StaticRowVec[6](
     -1 / 5,
     0,
 )
-alias Fehlberg5_Weights = StaticRowVec[6](
+alias Fehlberg5_Weights = StaticColVec[6](
     16 / 135, 0, 6656 / 12825, 28561 / 56430, -9 / 50, 2 / 55
 )
 alias Fehlberg45_Nodes = StaticRowVec[6](0, 1 / 4, 3 / 8, 12 / 13, 1, 1 / 2)
@@ -118,7 +118,7 @@ fn diffeq_integrate[
     steps: Int,
     coefs: StaticMat[steps, steps],
     nodes: StaticRowVec[steps],
-    weights: StaticRowVec[steps],
+    weights: StaticColVec[steps],
 ](
     intervals: Int,
     dt: Float64,
@@ -138,58 +138,55 @@ fn diffeq_integrate[
     var k = StaticMat[sys_dim, steps](0)
     for _ in range(intervals):
         diffeq_steps[sys_dim, steps, coefs, nodes](t, dt, value, diff, pars, k)
-        value = value + (dt * k @ weights.transpose())
+        value = value + (dt * k @ weights)
         t += dt
         times.append(t)
         values.append(value)
     return (times, values)
 
 
-fn err_est[
-    low: List[Float64], high: List[Float64]
-](k: List[Float64]) -> Float64:
-    var res: Float64 = 0
-    for i in range(low.size):
-        res += k[i] * abs(high[i] - low[i])
-    return res
-
-
 fn diffeq_integrate_adaptive[
-    coefs: List[Float64],
-    weights_high: List[Float64],
-    weights_low: List[Float64],
-    nodes: List[Float64],
+    sys_dim: Int,
+    steps: Int,
+    coefs: StaticMat[steps, steps],
+    nodes: StaticRowVec[steps],
+    weights_low: StaticColVec[steps],
+    weights_high: StaticColVec[steps],
 ](
     stop_at: Float64,
     init_dt: Float64,
-    init_value: Float64,
-    diff: fn (Float64, Float64, List[Float64]) -> Float64,
+    init_value: StaticColVec[sys_dim],
+    diff: fn (Float64, StaticColVec[sys_dim], List[Float64]) -> StaticColVec[
+        sys_dim
+    ],
     pars: List[Float64],
     t0: Float64 = 0,
     tol: Float64 = 1e-6,
-) -> Tuple[List[Float64], List[Float64]]:
-    alias p: Float64 = nodes.size - 2
+) raises -> Tuple[List[Float64], List[StaticColVec[sys_dim]]]:
+    alias p: Float64 = len(nodes) - 2
     var times = List[Float64]()
-    var values = List[Float64]()
+    var values = List[StaticColVec[sys_dim]]()
     times.append(t0)
     values.append(init_value)
     var t = t0
     var delt = init_dt
     var value = init_value
-    var k = zeros[nodes.size]()
+    var k = StaticMat[sys_dim, steps](0)
     while t < stop_at:
         if t + delt == t:
             print("Step size too small. Exiting.")
             break
-        diffeq_steps[coefs, nodes](t, delt, value, diff, pars, k)
-        var next = value + dot_prod[weights_low](k) * delt
-        var err = err_est[weights_low, weights_high](k) * delt
-        if err < tol:
+        diffeq_steps[sys_dim, steps, coefs, nodes](
+            t, delt, value, diff, pars, k
+        )
+        var next = value + value + (delt * k @ weights_low)
+        var err = k @ (weights_high - weights_low) * delt
+        if err.max_value() < tol:
             t += min(delt, stop_at - t)
             value = next
             times.append(t)
             values.append(value)
-        var s = (tol / err / 2) ** (1 / p)
+        var s = (tol / err.max_value() / 2) ** (1 / p)
         delt *= min(s, 4)
     return (times, values)
 

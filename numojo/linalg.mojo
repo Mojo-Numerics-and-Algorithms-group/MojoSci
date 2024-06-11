@@ -485,6 +485,15 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
         return res
 
+    @always_inline
+    fn max_value(self) -> Self.ElementType:
+        var max = self.get[0, 0]()
+        @parameter
+        for i in range(self.storage_size):
+            if self.elements[i] > max:
+                max = self.elements[i]
+        return max
+
     # ==========================================
     # Matrix transforms
     # ==========================================
