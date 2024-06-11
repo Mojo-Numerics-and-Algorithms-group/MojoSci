@@ -11,34 +11,34 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from numojo.linalg import Mat, RowVec, ColVec
+from numojo.linalg import StaticMat, StaticRowVec, StaticColVec
 
 # Eventually struct, matrix, or tensor type
-alias RK4_Coefs = Mat[4, 4](
+alias RK4_Coefs = StaticMat[4, 4](
     0, 0, 0, 0, 1 / 2, 0, 0, 0, 0, 1 / 2, 0, 0, 0, 0, 1, 0
 )
-alias RK4_Weights = RowVec[4](1 / 6, 1 / 3, 1 / 3, 1 / 6)
-alias RK4_Nodes = RowVec[4](0, 1 / 2, 1 / 2, 1)
+alias RK4_Weights = StaticRowVec[4](1 / 6, 1 / 3, 1 / 3, 1 / 6)
+alias RK4_Nodes = StaticRowVec[4](0, 1 / 2, 1 / 2, 1)
 
-alias RK38_Coefs = Mat[4, 4](
+alias RK38_Coefs = StaticMat[4, 4](
     0, 0, 0, 0, 1 / 3, 0, 0, 0, -1 / 3, 1, 0, 0, 1, -1, 1, 0
 )
-alias RK38_Weights = RowVec[4](1 / 8, 3 / 8, 3 / 8, 1 / 8)
-alias RK38_Nodes = RowVec[4](0, 1 / 3, 2 / 3, 1)
+alias RK38_Weights = StaticRowVec[4](1 / 8, 3 / 8, 3 / 8, 1 / 8)
+alias RK38_Nodes = StaticRowVec[4](0, 1 / 3, 2 / 3, 1)
 
-alias MidPoint_Coefs = Mat[2, 2](0, 0, 1 / 2, 0)
-alias MidPoint_Weights = RowVec[2](0, 1)
-alias MidPoint_Nodes = RowVec[2](0, 1 / 2)
+alias MidPoint_Coefs = StaticMat[2, 2](0, 0, 1 / 2, 0)
+alias MidPoint_Weights = StaticRowVec[2](0, 1)
+alias MidPoint_Nodes = StaticRowVec[2](0, 1 / 2)
 
-alias Heun_Coefs = Mat[2, 2](0, 0, 1, 0)
-alias Heun_Weights = RowVec[2](1 / 2, 1 / 2)
-alias Heun_Nodes = RowVec[2](0, 1)
+alias Heun_Coefs = StaticMat[2, 2](0, 0, 1, 0)
+alias Heun_Weights = StaticRowVec[2](1 / 2, 1 / 2)
+alias Heun_Nodes = StaticRowVec[2](0, 1)
 
-alias Ralston_Coefs = Mat[2, 2](0, 0, 2 / 3, 0)
-alias Ralston_Weights = RowVec[2](1 / 4, 3 / 4)
-alias Ralston_Nodes = RowVec[2](0, 2 / 3)
+alias Ralston_Coefs = StaticMat[2, 2](0, 0, 2 / 3, 0)
+alias Ralston_Weights = StaticRowVec[2](1 / 4, 3 / 4)
+alias Ralston_Nodes = StaticRowVec[2](0, 2 / 3)
 
-alias Fehlberg45_Coefs = Mat[6, 6](
+alias Fehlberg45_Coefs = StaticMat[6, 6](
     0,  # 0, 0
     0,  # 0, 1
     0,  # 0, 2
@@ -76,7 +76,7 @@ alias Fehlberg45_Coefs = Mat[6, 6](
     -11 / 40,  # 5, 4
     0,  # 5, 5
 )
-alias Fehlberg4_Weights = RowVec[6](
+alias Fehlberg4_Weights = StaticRowVec[6](
     25 / 216,
     0,
     1408 / 2565,
@@ -84,52 +84,61 @@ alias Fehlberg4_Weights = RowVec[6](
     -1 / 5,
     0,
 )
-alias Fehlberg5_Weights = RowVec[6](
+alias Fehlberg5_Weights = StaticRowVec[6](
     16 / 135, 0, 6656 / 12825, 28561 / 56430, -9 / 50, 2 / 55
 )
-alias Fehlberg45_Nodes = RowVec[6](0, 1 / 4, 3 / 8, 12 / 13, 1, 1 / 2)
+alias Fehlberg45_Nodes = StaticRowVec[6](0, 1 / 4, 3 / 8, 12 / 13, 1, 1 / 2)
 
 
 fn diffeq_steps[
-    sys_dim: Int, steps: Int, coefs: Mat[steps, steps], nodes: RowVec[steps]
+    sys_dim: Int,
+    steps: Int,
+    coefs: StaticMat[steps, steps],
+    nodes: StaticRowVec[steps],
 ](
     t: Float64,
     dt: Float64,
-    s: ColVec[sys_dim],
-    diff: fn (Float64, ColVec[sys_dim], List[Float64]) -> ColVec[sys_dim],
+    s: StaticColVec[sys_dim],
+    diff: fn (Float64, StaticColVec[sys_dim], List[Float64]) -> StaticColVec[
+        sys_dim
+    ],
     pars: List[Float64],
-    inout k: Mat[sys_dim, steps],
+    inout k: StaticMat[sys_dim, steps],
 ) raises:
     var knots = t + nodes * dt
 
     @parameter
     for i in range(len(nodes)):
-        var s_proj: ColVec[sys_dim] = s + k @ coefs.get_col(i)
-        k[i] = diff(knots[i], s_proj, pars)
+        var s_proj = s + k.get_col[i]() @ coefs.get_col[i]()
+        k.set_col[i](diff(knots[i], s_proj, pars))
 
 
 fn diffeq_integrate[
-    coefs: List[Float64],
-    weights: List[Float64],
-    nodes: List[Float64],
-](
+    sys_dim: Int,
     steps: Int,
+    coefs: StaticMat[steps, steps],
+    nodes: StaticRowVec[steps],
+    weights: StaticRowVec[steps],
+](
+    intervals: Int,
     dt: Float64,
-    init_value: Float64,
-    diff: fn (Float64, Float64, List[Float64]) -> Float64,
+    init_value: StaticColVec[sys_dim],
+    diff: fn (Float64, StaticColVec[sys_dim], List[Float64]) -> StaticColVec[
+        sys_dim
+    ],
     pars: List[Float64],
     t0: Float64 = 0,
-) -> Tuple[List[Float64], List[Float64]]:
+) raises -> Tuple[List[Float64], List[StaticColVec[sys_dim]]]:
     var times = List[Float64]()
-    var values = List[Float64]()
+    var values = List[StaticColVec[sys_dim]]()
     times.append(t0)
     values.append(init_value)
     var t = t0
     var value = init_value
-    var k = zeros[nodes.size]()
-    for _ in range(steps):
-        diffeq_steps[coefs, nodes](t, dt, value, diff, pars, k)
-        value += dot_prod[weights](k) * dt
+    var k = StaticMat[sys_dim, steps](0)
+    for _ in range(intervals):
+        diffeq_steps[sys_dim, steps, coefs, nodes](t, dt, value, diff, pars, k)
+        value = value + (dt * k @ weights.transpose())
         t += dt
         times.append(t)
         values.append(value)

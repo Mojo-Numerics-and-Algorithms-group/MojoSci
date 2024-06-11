@@ -57,7 +57,7 @@ struct StaticMat[rows: Int, cols: Int](Sized):
         self.fill(generator)
 
     @always_inline
-    """Initialize matrix and fill from list of arguments."""
+    """Initialize matrix and fill with the provided arguments."""
     fn __init__(inout self, *elems: Self.ElementType):
         self.elements = Self.StorageType(elems)
 
@@ -161,12 +161,14 @@ struct StaticMat[rows: Int, cols: Int](Sized):
     fn __setitem__(
         inout self, row: Int, col: Int, value: Self.ElementType
     ) raises:
+        """Set a value with bounds checking."""
         if row < 0 or row > rows or col < 0 or col > cols:
             raise Error("Index out of bounds")
         self.elements[self.pos(row, col)] = value
 
     @always_inline
     fn swap_rows[cstart: Int = 0, cend: Int = cols](inout self, row1: Int, row2: Int):
+        """Swap rows in-place with option for partial swap."""
         @parameter
         for col in range(cstart, cend):
             swap(
@@ -176,6 +178,7 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
     @always_inline
     fn swap_cols[rstart: Int = 0, rend: Int = rows](inout self, col1: Int, col2: Int):
+        """Swap columns in-place with option for partial swap."""
         @parameter
         for row in range(rstart, rend):
             swap(
@@ -286,7 +289,14 @@ struct StaticMat[rows: Int, cols: Int](Sized):
     
     @staticmethod
     fn ones_col() -> StaticColVec[rows]:
-        """Create zeros matrix of matching dimensions."""
+        """Create zeros matrix of matching dimensions.
+        
+        ```mojo
+        var x = StaticMat[3, 3](1)
+        var y = x @ x.ones_col() # row sums
+        assert_equal(y, StaticMat[3, 1](3))
+        ```
+        """
         return StaticColVec[rows](1)
 
     @staticmethod
@@ -298,6 +308,7 @@ struct StaticMat[rows: Int, cols: Int](Sized):
     # Predicates
     # ==========================================
 
+    # TODO: Elementwise + all/any functions
     @always_inline
     fn __eq__(self, other: Self) -> Bool:
         var res = True
@@ -402,6 +413,7 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
     @always_inline
     fn __radd__(self, other: Self.ElementType) -> Self:
+        """Add the elements of a matrix to a scalar and return a matrix."""
         var res = Self()
 
         @parameter
@@ -412,6 +424,7 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
     @always_inline
     fn __rsub__(self, other: Self.ElementType) -> Self:
+        """Subtract elements of a matrix from a scalar and return a matrix."""
         var res = Self()
 
         @parameter
@@ -422,6 +435,7 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
     @always_inline
     fn __rmul__(self, other: Self.ElementType) -> Self:
+        """Multiply a scalar by the elments of a matrix returing a matrix."""
         var res = Self()
 
         @parameter
@@ -432,6 +446,7 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
     @always_inline
     fn __rtruediv__(self, other: Self.ElementType) -> Self:
+        """Divide a scalar by the elements of a matrix returning a matrix."""
         var res = Self()
 
         @parameter
@@ -446,6 +461,12 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
     @always_inline
     fn __matmul__(self, other: StaticMat) -> StaticMat[rows, other.cols]:
+        """Perform a matrix-matrix multiply and return the result.
+
+        All loops should be unrolled and the entire operation inlined.
+        This may be very slow for large matrices as the code size could
+        balloon into many millions of rows. This will not compile if the
+        two matrices do not have compatible dimensions."""
         constrained[cols == other.rows, "Incompatible dimensions"]()
         var res = StaticMat[rows, other.cols](0)
 
@@ -486,7 +507,10 @@ struct StaticMat[rows: Int, cols: Int](Sized):
     fn PLU_decompose(
         self,
     ) -> (StaticMat[rows, rows], StaticMat[rows, rows], Self):
-        """Compute PLU decomposition."""
+        """Computes the PLU decomposition of the input matrix.
+        
+        Returns (P, L, U) such that P @ A == L @ U where
+        A in the (possibly non-square) input matrix."""
 
         var P = StaticMat[rows, rows].diag()
         var L = P
@@ -534,6 +558,9 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 alias StaticRowVec = StaticMat[1, _]
 alias StaticColVec = StaticMat[_, 1]
 
+# fn main():
+#     var x = StaticMat[3, 3](1)
+#     var y = x @ x.ones_col()
 
 # fn main() raises:
 #     var X6 = StaticMat[5, 3](1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
