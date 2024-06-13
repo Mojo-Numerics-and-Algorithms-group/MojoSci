@@ -13,24 +13,38 @@
 
 
 from math import sqrt, log, cos
+from utils.numerics import max_finite
 
 
-trait PRNGEngine(Copyable):
+trait PRNGEngine(Movable):
+    # @staticmethod
+    # fn return_type() -> DType:
+    #     pass
+
     fn __call__(inout self) -> UInt64:
         pass
 
 
+# @register_passable("trivial")
 struct PRNG[T: PRNGEngine]:
-    alias max_value = UInt64.MAX_FINITE.cast[DType.float64]()
+    # alias EngineReturnType: DType = T.return_type()
+    # alias max_value = max_finite[Self.EngineReturnType]()
+    alias max_value = UInt64.MAX_FINITE
 
     var engine: T
 
-    fn __init__(inout self, engine: T):
-        self.engine = engine
+    fn __init__(inout self, owned engine: T):
+        self.engine = engine^
+
+    fn uniform_uint(inout self, min: UInt64 = 0, max: UInt64 = 1) -> UInt64:
+        var res = self.engine()
+        var scaled = res % self.max_value
+        return (max - min) * scaled + min
 
     fn uniform(inout self, min: Float64 = 0, max: Float64 = 1) -> Float64:
         var res = self.engine().cast[DType.float64]()
-        return (max - min) * (res / self.max_value) + min
+        var scaled = res / self.max_value.cast[DType.float64]()
+        return (max - min) * scaled + min
 
     fn normal(inout self, mean: Float64 = 0, sd: Float64 = 1) -> Float64:
         alias pi2: Float64 = 6.28318530718

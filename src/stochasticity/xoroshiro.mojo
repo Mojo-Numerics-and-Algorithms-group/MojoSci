@@ -13,7 +13,7 @@
 
 from time import now
 from bit import rotate_bits_left
-from numojo.splitmix import SplitMix
+from stochasticity.splitmix import SplitMix
 
 
 @register_passable("trivial")

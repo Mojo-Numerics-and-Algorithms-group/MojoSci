@@ -11,7 +11,7 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from numojo.linalg import StaticMat, StaticRowVec, StaticColVec
+from linalg import StaticMat, StaticRowVec, StaticColVec
 
 
 fn diffeq_stages[

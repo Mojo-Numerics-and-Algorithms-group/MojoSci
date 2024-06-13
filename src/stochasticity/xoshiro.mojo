@@ -13,7 +13,7 @@
 
 from time import now
 from bit import rotate_bits_left
-from numojo.splitmix import SplitMix
+from stochasticity.splitmix import SplitMix
 
 @always_inline
 fn xoshiro256_plus(s0: UInt64, s1: UInt64, s2: UInt64, s3: UInt64) -> UInt64:
@@ -329,4 +329,6 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
         return self.next()
 
 
-
+fn main():
+    var rng = Xoshiro256PlusPlus()
+    print(rng.next())
