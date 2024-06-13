@@ -15,7 +15,6 @@
 from utils import StaticTuple
 from math import isclose
 
-
 @value
 @register_passable("trivial")
 struct StaticMat[rows: Int, cols: Int](Sized):
@@ -468,7 +467,7 @@ struct StaticMat[rows: Int, cols: Int](Sized):
         balloon into many millions of rows. This will not compile if the
         two matrices do not have compatible dimensions."""
         constrained[cols == other.rows, "Incompatible dimensions"]()
-        var res = StaticMat[rows, other.cols](0)
+        var res = StaticMat[rows, other.cols]()
 
         @parameter
         for i in range(res.rows):
@@ -476,8 +475,11 @@ struct StaticMat[rows: Int, cols: Int](Sized):
             @parameter
             for j in range(res.cols):
 
+                res.elements[res.pos[i, j]()] =  self.elements[self.pos[i, 0]()]
+                        * other.elements[other.pos[0, j]()]
+
                 @parameter
-                for k in range(other.rows):
+                for k in range(1, other.rows):
                     res.elements[res.pos[i, j]()] += (
                         self.elements[self.pos[i, k]()]
                         * other.elements[other.pos[k, j]()]
@@ -489,7 +491,7 @@ struct StaticMat[rows: Int, cols: Int](Sized):
     fn max_value(self) -> Self.ElementType:
         var max = self.get[0, 0]()
         @parameter
-        for i in range(self.storage_size):
+        for i in range(1, self.storage_size):
             if self.elements[i] > max:
                 max = self.elements[i]
         return max
@@ -511,6 +513,19 @@ struct StaticMat[rows: Int, cols: Int](Sized):
                 res.set[col, row](self.get[row, col]())
 
         return res
+
+    @always_inline
+    fn transpose_inplace(inout self):
+        """Return the matrix with rows and columns swapped."""
+
+        @parameter
+        for row in range(rows):
+
+            @parameter
+            for col in range(cols):
+                var tmp = self.get[row, col]()
+                self.set[row, col](self.get[col, row]())
+                self.set[col, row](tmp)
 
     @always_inline
     fn PLU_decompose(
