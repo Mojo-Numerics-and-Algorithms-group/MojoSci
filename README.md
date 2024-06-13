@@ -1,4 +1,4 @@
-# numojo 
+# Mojosci 
 Numerics for Mojo
 
 ## Random number generators
