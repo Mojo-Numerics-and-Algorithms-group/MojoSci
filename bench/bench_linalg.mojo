@@ -1,6 +1,6 @@
 from benchmark import *
-from numojo.linalg import *
-from numojo.splitmix import *
+from linalg.static_matrix import StaticMat
+from stochasticity.splitmix import SplitMix
 
 from python import Python
 

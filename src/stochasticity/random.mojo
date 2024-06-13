@@ -37,17 +37,31 @@ struct PRNG[T: PRNGEngine]:
         self.engine = engine^
 
     fn uniform_uint(inout self, min: UInt64 = 0, max: UInt64 = 1) -> UInt64:
+        """Generate uniform random unsigned integers."""
         var res = self.engine()
-        var scaled = res % self.max_value
-        return (max - min) * scaled + min
+        var scaled = res % (max - min + 1)
+        return scaled + min
 
     fn uniform(inout self, min: Float64 = 0, max: Float64 = 1) -> Float64:
+        """Generate uniform random floats."""
         var res = self.engine().cast[DType.float64]()
         var scaled = res / self.max_value.cast[DType.float64]()
         return (max - min) * scaled + min
 
     fn normal(inout self, mean: Float64 = 0, sd: Float64 = 1) -> Float64:
+        """Generate normal deviates.
+
+        This method is not highly accurate in the
+        tails of the distrubtion."""
         alias pi2: Float64 = 6.28318530718
         var a: Float64 = self.uniform(min=1e-7)
         var b: Float64 = self.uniform()
         return sd * sqrt(-2 * log(a)) * cos(pi2 * b) + mean
+
+
+# from stochasticity.splitmix import SplitMix
+
+
+# fn main():
+#     var rng = PRNG(SplitMix())
+#     print(rng.uniform_uint())
