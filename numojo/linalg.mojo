@@ -15,6 +15,11 @@
 from utils import StaticTuple
 from math import isclose
 
+# A few design notes
+# a) I am not using references as it seems lifetimes are still being worked out
+# b) I am not parallelizing as it may be counter productive for tiny 2x2 matrices, etc.
+# c) For now there is no point in making this generic over the element type
+
 @value
 @register_passable("trivial")
 struct StaticMat[rows: Int, cols: Int](Sized):
@@ -489,12 +494,29 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
     @always_inline
     fn max_value(self) -> Self.ElementType:
-        var max = self.get[0, 0]()
+        var max = self.elements[0]
         @parameter
         for i in range(1, self.storage_size):
             if self.elements[i] > max:
                 max = self.elements[i]
         return max
+
+    @always_inline
+    fn min_value(self) -> Self.ElementType:
+        var min = self.elements[0]
+        @parameter
+        for i in range(1, self.storage_size):
+            if self.elements[i] < min:
+                min = self.elements[i]
+        return min
+
+    @always_inline
+    fn sum(self) -> Self.ElementType:
+        var sum = self.elements[0]
+        @parameter
+        for i in range(1, self.storage_size):
+                sum += self.elements[i]
+        return sum
 
     # ==========================================
     # Matrix transforms
@@ -516,7 +538,7 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
     @always_inline
     fn transpose_inplace(inout self):
-        """Return the matrix with rows and columns swapped."""
+        """Swap rows and columns."""
 
         @parameter
         for row in range(rows):
