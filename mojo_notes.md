@@ -20,6 +20,10 @@
 
 [`StaticTuple`](https://docs.modular.com/mojo/stdlib/utils/static_tuple/StaticTuple): A statically sized tuple type which contains elements of homogeneous types. To use, `from utils import static_tuple`.
 
+## Types
+
+[`DType`](https://docs.modular.com/mojo/stdlib/builtin/dtype/DType) is a type that names other types, e.g., `var x: DType = DType.uint64`. Useful in generics.
+
 
 
 
