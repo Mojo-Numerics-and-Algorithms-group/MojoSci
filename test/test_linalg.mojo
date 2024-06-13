@@ -1,6 +1,6 @@
 from testing import *
-from linalg import StaticMat, StaticColVec
-from stochasticity import SplitMix
+from linalg.static_matrix import StaticMat, StaticColVec
+from stochasticity.splitmix import SplitMix
 
 
 var rng = SplitMix()
