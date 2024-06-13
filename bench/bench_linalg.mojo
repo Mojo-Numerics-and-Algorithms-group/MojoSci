@@ -18,7 +18,7 @@ fn bench_mat_mat_mult[rows: Int, cols: Int]() raises -> Report:
         var z = x @ y
         keep(z)
 
-    return run[doit](max_runtime_secs=5)
+    return run[doit]()
 
 
 fn bench_mat_mat_mult_np[rows: Int, cols: Int]() raises -> Report:
@@ -34,12 +34,12 @@ fn bench_mat_mat_mult_np[rows: Int, cols: Int]() raises -> Report:
     fn doit() capturing:
         try:
             var z = np.dot(x, y)
-        except Error:
+        except:
             pass
 
-    return run[doit](max_runtime_secs=5)
+    return run[doit]()
 
 
 fn main() raises:
     bench_mat_mat_mult[3, 3]().print("ns")
-    bench_mat_mat_mult_np[3, 3]().print("ns")
+    # bench_mat_mat_mult_np[3, 3]().print("ns")

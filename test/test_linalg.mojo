@@ -1,6 +1,6 @@
 from testing import *
-from numojo.linalg import StaticMat, StaticColVec
-from numojo.splitmix import SplitMix
+from linalg import StaticMat, StaticColVec
+from stochasticity import SplitMix
 
 
 var rng = SplitMix()
