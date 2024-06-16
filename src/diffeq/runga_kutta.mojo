@@ -11,24 +11,59 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from linalg import StaticMat, StaticRowVec, StaticColVec
+from linalg.static_matrix import StaticMat, StaticRowVec, StaticColVec
+
+
+alias Mat = StaticMat
+alias RVec = StaticRowVec
+alias CVec = StaticColVec
+
+
+trait AutoDESys:
+    fn deriv[S: AnyType](self, s: S) raises -> S:
+        pass
+
+    @staticmethod
+    fn ndim(self) -> Int:
+        pass
+
+
+struct Lorenz:
+    var p1: Float64
+    var p2: Float64
+    var p3: Float64
+
+    fn __init__(inout self, p1: Float64, p2: Float64, p3: Float64):
+        self.p1 = p1
+        self.p2 = p2
+        self.p3 = p3
+
+    # @always_inline
+    fn deriv(self, s: CVec[3]) raises -> CVec[3]:
+        return CVec[3](
+            self.p1 * (s[1] - s[0]),
+            s[0] * (self.p2 - s[2]) - s[1],
+            s[0] * s[1] - self.p3 * s[2],
+        )
+
+    # @always_inline
+    fn ndim(self) -> Int:
+        return 3
 
 
 fn diffeq_stages[
     npars: Int,
     sys_dim: Int,
     strides: Int,
-    coefs: StaticMat[strides, strides],
-    stages: StaticRowVec[strides],
+    coefs: Mat[strides, strides],
+    stages: RVec[strides],
 ](
     t: Float64,
     dt: Float64,
-    s: StaticColVec[sys_dim],
-    diff: fn (
-        Float64, StaticColVec[sys_dim], StaticColVec[npars]
-    ) -> StaticColVec[sys_dim],
-    pars: StaticColVec[npars],
-    inout k: StaticMat[sys_dim, strides],
+    s: CVec[sys_dim],
+    diff: fn (Float64, CVec[sys_dim], CVec[npars]) -> CVec[sys_dim],
+    pars: CVec[npars],
+    inout k: Mat[sys_dim, strides],
 ) raises:
     var knots = t + stages * dt
 
@@ -42,26 +77,24 @@ fn diffeq_integrate[
     npars: Int,
     sys_dim: Int,
     strides: Int,
-    coefs: StaticMat[strides, strides],
-    stages: StaticRowVec[strides],
-    weights: StaticColVec[strides],
+    coefs: Mat[strides, strides],
+    stages: RVec[strides],
+    weights: CVec[strides],
 ](
     steps: Int,
     dt: Float64,
-    init_value: StaticColVec[sys_dim],
-    diff: fn (
-        Float64, StaticColVec[sys_dim], StaticColVec[npars]
-    ) -> StaticColVec[sys_dim],
-    pars: StaticColVec[npars],
+    init_value: CVec[sys_dim],
+    diff: fn (Float64, CVec[sys_dim], CVec[npars]) -> CVec[sys_dim],
+    pars: CVec[npars],
     t0: Float64 = 0,
-) raises -> Tuple[List[Float64], List[StaticColVec[sys_dim]]]:
+) raises -> Tuple[List[Float64], List[CVec[sys_dim]]]:
     var times = List[Float64]()
-    var values = List[StaticColVec[sys_dim]]()
+    var values = List[CVec[sys_dim]]()
     times.append(t0)
     values.append(init_value)
     var t = t0
     var value = init_value
-    var k = StaticMat[sys_dim, strides].zeros()
+    var k = Mat[sys_dim, strides].zeros()
     for _ in range(steps):
         diffeq_stages[npars, sys_dim, strides, coefs, stages](
             t, dt, value, diff, pars, k
@@ -77,30 +110,28 @@ fn diffeq_integrate_adaptive[
     npars: Int,
     sys_dim: Int,
     strides: Int,
-    coefs: StaticMat[strides, strides],
-    stages: StaticRowVec[strides],
-    weights_low: StaticColVec[strides],
-    weights_high: StaticColVec[strides],
+    coefs: Mat[strides, strides],
+    stages: RVec[strides],
+    weights_low: CVec[strides],
+    weights_high: CVec[strides],
 ](
     stop_at: Float64,
     init_dt: Float64,
-    init_value: StaticColVec[sys_dim],
-    diff: fn (
-        Float64, StaticColVec[sys_dim], StaticColVec[npars]
-    ) -> StaticColVec[sys_dim],
-    pars: StaticColVec[npars],
+    init_value: CVec[sys_dim],
+    diff: fn (Float64, CVec[sys_dim], CVec[npars]) -> CVec[sys_dim],
+    pars: CVec[npars],
     t0: Float64 = 0,
     tol: Float64 = 1e-6,
-) raises -> Tuple[List[Float64], List[StaticColVec[sys_dim]]]:
+) raises -> Tuple[List[Float64], List[CVec[sys_dim]]]:
     alias p: Float64 = len(stages) - 2  # FixMe
     var times = List[Float64]()
-    var values = List[StaticColVec[sys_dim]]()
+    var values = List[CVec[sys_dim]]()
     times.append(t0)
     values.append(init_value)
     var t = t0
     var delt = init_dt
     var value = init_value
-    var k = StaticMat[sys_dim, strides].zeros()
+    var k = Mat[sys_dim, strides].zeros()
     while t < stop_at:
         delt = min(delt, stop_at - t)
         if t + delt == t:
@@ -121,23 +152,23 @@ fn diffeq_integrate_adaptive[
     return (times, values)
 
 
-trait RKMethod:
+""" trait RKMethod:
     fn get_order(self) -> Int:
         pass
 
     fn get_strides(self) -> Int:
         pass
 
-    fn get_weights(self) -> StaticColVec[]:
+    fn get_weights(self) -> CVec[]:
         pass
 
 
 struct RK4(RKMethod):
     alias order: Int = 4
     alias strides: Int = 4
-    alias weights = StaticColVec[4](1 / 6, 1 / 3, 1 / 3, 1 / 6)
-    alias stages = StaticRowVec[4](0, 1 / 2, 1 / 2, 1)
-    alias coefs = StaticMat[4, 4](
+    alias weights = CVec[4](1 / 6, 1 / 3, 1 / 3, 1 / 6)
+    alias stages = RVec[4](0, 1 / 2, 1 / 2, 1)
+    alias coefs = Mat[4, 4](
         0, 0, 0, 0, 1 / 2, 0, 0, 0, 0, 1 / 2, 0, 0, 0, 0, 1, 0
     )
 
@@ -153,54 +184,45 @@ struct RK4(RKMethod):
         return self.strides
 
     @always_inline
-    fn get_weights(self) -> StaticColVec[self.strides]:
+    fn get_weights(self) -> CVec[self.strides]:
         return self.strides
-
-
-fn main() raises:
-    var x = RK4()
-    print(x.get_weights()[0])
+ """
 
 
 # fn logis(t: Float64, s: Float64, pars: List[Float64]) -> Float64:
 #     return pars[0] * s * (1 - s / pars[1])
 
 
-# fn main():
-#     var pars = List[Float64](0.1, 10)
-#     var res = fehlberg45_integrate(10000, 1e-6, 0.001, logis, pars, tol=1e-6)
-#     var times = res[0]
-#     var values = res[1]
-#     for i in range(times.size):
-#         print(times[i], values[i])
+fn main():
+    var x = Lorenz(10, 28, 8 / 3)
 
 
-alias RK4_Coefs = StaticMat[4, 4](
+alias RK4_Coefs = Mat[4, 4](
     0, 0, 0, 0, 1 / 2, 0, 0, 0, 0, 1 / 2, 0, 0, 0, 0, 1, 0
 )
-alias RK4_Weights = StaticColVec[4](1 / 6, 1 / 3, 1 / 3, 1 / 6)
-alias RK4_Stages = StaticRowVec[4](0, 1 / 2, 1 / 2, 1)
+alias RK4_Weights = CVec[4](1 / 6, 1 / 3, 1 / 3, 1 / 6)
+alias RK4_Stages = RVec[4](0, 1 / 2, 1 / 2, 1)
 
 
-alias RK38_Coefs = StaticMat[4, 4](
+alias RK38_Coefs = Mat[4, 4](
     0, 0, 0, 0, 1 / 3, 0, 0, 0, -1 / 3, 1, 0, 0, 1, -1, 1, 0
 )
-alias RK38_Weights = StaticColVec[4](1 / 8, 3 / 8, 3 / 8, 1 / 8)
-alias RK38_Stages = StaticRowVec[4](0, 1 / 3, 2 / 3, 1)
+alias RK38_Weights = CVec[4](1 / 8, 3 / 8, 3 / 8, 1 / 8)
+alias RK38_Stages = RVec[4](0, 1 / 3, 2 / 3, 1)
 
-alias MidPoint_Coefs = StaticMat[2, 2](0, 0, 1 / 2, 0)
-alias MidPoint_Weights = StaticColVec[2](0, 1)
-alias MidPoint_Stages = StaticRowVec[2](0, 1 / 2)
+alias MidPoint_Coefs = Mat[2, 2](0, 0, 1 / 2, 0)
+alias MidPoint_Weights = CVec[2](0, 1)
+alias MidPoint_Stages = RVec[2](0, 1 / 2)
 
-alias Heun_Coefs = StaticMat[2, 2](0, 0, 1, 0)
-alias Heun_Weights = StaticColVec[2](1 / 2, 1 / 2)
-alias Heun_Stages = StaticRowVec[2](0, 1)
+alias Heun_Coefs = Mat[2, 2](0, 0, 1, 0)
+alias Heun_Weights = CVec[2](1 / 2, 1 / 2)
+alias Heun_Stages = RVec[2](0, 1)
 
-alias Ralston_Coefs = StaticMat[2, 2](0, 0, 2 / 3, 0)
-alias Ralston_Weights = StaticColVec[2](1 / 4, 3 / 4)
-alias Ralston_Stages = StaticRowVec[2](0, 2 / 3)
+alias Ralston_Coefs = Mat[2, 2](0, 0, 2 / 3, 0)
+alias Ralston_Weights = CVec[2](1 / 4, 3 / 4)
+alias Ralston_Stages = RVec[2](0, 2 / 3)
 
-alias Fehlberg45_Coefs = StaticMat[6, 6](
+alias Fehlberg45_Coefs = Mat[6, 6](
     0,  # 0, 0
     0,  # 0, 1
     0,  # 0, 2
@@ -238,7 +260,7 @@ alias Fehlberg45_Coefs = StaticMat[6, 6](
     -11 / 40,  # 5, 4
     0,  # 5, 5
 )
-alias Fehlberg4_Weights = StaticColVec[6](
+alias Fehlberg4_Weights = CVec[6](
     25 / 216,
     0,
     1408 / 2565,
@@ -246,7 +268,7 @@ alias Fehlberg4_Weights = StaticColVec[6](
     -1 / 5,
     0,
 )
-alias Fehlberg5_Weights = StaticColVec[6](
+alias Fehlberg5_Weights = CVec[6](
     16 / 135, 0, 6656 / 12825, 28561 / 56430, -9 / 50, 2 / 55
 )
-alias Fehlberg45_Stages = StaticRowVec[6](0, 1 / 4, 3 / 8, 12 / 13, 1, 1 / 2)
+alias Fehlberg45_Stages = RVec[6](0, 1 / 4, 3 / 8, 12 / 13, 1, 1 / 2)
