@@ -244,7 +244,7 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
          """Start the sequence over using the current seed value.
          
         The first stream is seeded just as Xoshiro256PlusPlus.
-        The other n-1 streams are seeded by taking a long jump
+        The other n-1 streams are seeded by taking a jump
         and assigning the jumped state to the next generator.
         This will result in independent streams, which will be
         returned as n-values in a SIMD."""
@@ -254,7 +254,7 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
             self.s1[i] = seedr.s1
             self.s2[i] = seedr.s2
             self.s3[i] = seedr.s3
-            seedr.long_jump()
+            seedr.jump()
 
     fn reseed(inout self, seed: Self.SeedType):
         """Set a new seed and reset the generator."""
