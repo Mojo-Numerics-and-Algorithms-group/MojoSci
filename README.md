@@ -1,5 +1,9 @@
-# Mojosci 
-Numerics for Mojo
+# MojoSci 
+The goal of this project is to provide a set of libraries for Mojo that will facilitate education, modeling, data analysis, and statistics. Right now, it is mostly comoposed of simple elements that I use in my work and wanted to begin moving to Mojo. Some operating principles are:
+
+1. Write simple, readable code that is maintainable and teachable.
+2. Provide both compile-time and run-time interfaces when it makes sense to do so.
+3. Keep it simple and let the compiler do the heavy lifting; optimize later using benchmark results.
 
 ## Random number generators
 
