@@ -11,7 +11,10 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
+# Non-generic version to generalize later
 
+
+# Need to generalize on state type
 trait DESys(Copyable):
     fn deriv(self, t: Float64, s: List[Float64]) -> List[Float64]:
         pass
@@ -75,14 +78,14 @@ struct RungaKuttaIntegrate[S: DESys]:
     var sys: S
 
     fn __init__(
-        inout self, sys: S, state: List[Float64], dt: Float64, t: Float64 = 0
+        inout self, sys: S, state: List[Float64], dt: Float64, t0: Float64 = 0
     ) raises:
         if len(state) != S.ndim():
             raise Error("Initial state has the wrong number of dimensions")
         self.sys = sys
         self.state = state
         self.dt = dt
-        self.t = t
+        self.t = t0
 
     fn step(inout self):
         var k0 = self.sys.deriv(self.t, self.state)
