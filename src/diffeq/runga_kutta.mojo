@@ -20,15 +20,15 @@ alias CVec = StaticColVec
 
 
 trait AutoDESys:
-    fn deriv[S: AnyType](self, s: S) raises -> S:
+    fn deriv[sdim: Int, S: CVec[sdim]](self, s: S) raises -> S:
         pass
 
     @staticmethod
-    fn ndim(self) -> Int:
+    fn ndim() -> Int:
         pass
 
 
-struct Lorenz:
+struct Lorenz(AutoDESys):
     var p1: Float64
     var p2: Float64
     var p3: Float64
@@ -38,7 +38,7 @@ struct Lorenz:
         self.p2 = p2
         self.p3 = p3
 
-    # @always_inline
+    @always_inline
     fn deriv(self, s: CVec[3]) raises -> CVec[3]:
         return CVec[3](
             self.p1 * (s[1] - s[0]),
@@ -46,8 +46,8 @@ struct Lorenz:
             s[0] * s[1] - self.p3 * s[2],
         )
 
-    # @always_inline
-    fn ndim(self) -> Int:
+    @staticmethod
+    fn ndim() -> Int:
         return 3
 
 
