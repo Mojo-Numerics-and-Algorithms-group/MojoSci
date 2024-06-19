@@ -12,13 +12,7 @@
 # ===----------------------------------------------------------------------=== #
 
 
-trait DESys(Copyable):
-    fn deriv(self, t: Float64, s: List[Float64]) -> List[Float64]:
-        pass
-
-    @staticmethod
-    fn ndim() -> Int:
-        pass
+from .traits import *
 
 
 @value
@@ -71,29 +65,57 @@ struct EulerSteoper[S: DESys]:
         self.t += self.dt
 
 
-trait RKMethod:
+struct Euler(RKStrategy):
     @staticmethod
     fn order() -> Int:
-        pass
+        return 1
 
     @staticmethod
     fn stages() -> Int:
-        pass
+        return 1
 
     @staticmethod
     fn coef[i: Int, j: Int]() -> Float64:
-        pass
+        constrained[False, "Coefficient index out of range."]()
+        return 1
 
     @staticmethod
     fn stride[i: Int]() -> Float64:
-        pass
+        constrained[i == 0, "Stride index out of range."]()
+        return 0
 
     @staticmethod
     fn weight[i: Int]() -> Float64:
-        pass
+        constrained[i == 0, "Weight index out of range."]()
+        return 1
 
 
-struct RK4:
+struct BackwardEuler(RKStrategy):
+    @staticmethod
+    fn order() -> Int:
+        return 1
+
+    @staticmethod
+    fn stages() -> Int:
+        return 1
+
+    @staticmethod
+    fn coef[i: Int, j: Int]() -> Float64:
+        constrained[False, "Coefficient index out of range."]()
+        return 1
+
+    @staticmethod
+    fn stride[i: Int]() -> Float64:
+        constrained[i == 0, "Stride index out of range."]()
+        return 1
+
+    @staticmethod
+    fn weight[i: Int]() -> Float64:
+        constrained[i == 0, "Weight index out of range."]()
+        return 1
+
+
+struct RK4(RKStrategy):
     @staticmethod
     fn order() -> Int:
         return 4
@@ -104,22 +126,23 @@ struct RK4:
 
     @staticmethod
     fn coef[i: Int, j: Int]() -> Float64:
-        constrained[
-            j <= i, "Coefficient index cannot be greater than the stage number."
-        ]()
-        alias pos = (i * (i + 1)) // 2 + j
+        constrained[i >= 0 and i < 4, "Coefficient stage index out of range."]()
+        constrained[j >= 0 and j < i, "Coefficent step index out of range."]()
+        alias pos = (i * (i - 1)) // 2 + j
         return [1 / 2, 0, 1 / 2, 0, 0, 1].get[pos, Float64]()
 
     @staticmethod
     fn stride[i: Int]() -> Float64:
+        constrained[i >= 0 and i < 4, "Stride index out of range."]()
         return [0, 1 / 2, 1 / 2, 1].get[i, Float64]()
 
     @staticmethod
     fn weight[i: Int]() -> Float64:
+        constrained[i >= 0 and i < 4, "Weight index out of range."]()
         return [1 / 6, 1 / 3, 1 / 3, 1 / 6].get[i, Float64]()
 
 
-struct RKStepper[Method: RKMethod, Sys: DESys]:
+struct RKStepper[Strategy: RKStrategy, Sys: DESys]:
     var state: List[Float64]
     var dt: Float64
     var t: Float64
@@ -139,8 +162,8 @@ struct RKStepper[Method: RKMethod, Sys: DESys]:
         var k = List[List[Float64]]()
 
         @parameter
-        for stage in range(Method.stages()):
-            var t = self.t + Method.stride[stage]() * self.dt
+        for stage in range(Strategy.stages()):
+            var t = self.t + Strategy.stride[stage]() * self.dt
             k.append(self.state)
 
             @parameter
@@ -149,17 +172,17 @@ struct RKStepper[Method: RKMethod, Sys: DESys]:
                 @parameter
                 for i in range(Sys.ndim()):
                     k[stage][i] += (
-                        Method.coef[stage, step]() * k[step][i] * self.dt
+                        Strategy.coef[stage, step]() * k[step][i] * self.dt
                     )
 
             k[stage] = self.sys.deriv(t, k[stage])
 
         @parameter
-        for i in range(Method.stages()):
+        for i in range(Strategy.stages()):
 
             @parameter
             for j in range(Sys.ndim()):
-                self.state[j] += Method.weight[i]() * k[i][j] * self.dt
+                self.state[j] += Strategy.weight[i]() * k[i][j] * self.dt
 
         self.t += self.dt
 
@@ -167,8 +190,8 @@ struct RKStepper[Method: RKMethod, Sys: DESys]:
 fn main() raises:
     var grad = Lorenz(10, 28, 8 / 3)
     var s0 = List[Float64](2.0, 1.0, 1.0)
-    var stepper = RKStepper[RK4](grad, s0, 0.01)
-    for _ in range(20):
+    var stepper = RKStepper[RK4](grad, s0, 0.001)
+    for _ in range(30):
         print("t =", stepper.t, end=": ")
         for i in range(3):
             print(stepper.state[i], end=" ")
