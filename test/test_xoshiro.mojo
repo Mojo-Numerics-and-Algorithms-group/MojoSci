@@ -32,7 +32,7 @@ def test_xoshiro256starstar():
 
 def test_xoshiro256ParallelPlusPlus():
     var seed: UInt64 = 123
-    var rng_par = Xoshiro256PlusPlusSIMD[4](seed)
+    var rng_par = Xoshiro256VectPlusPlus[4](seed)
     var rng1 = Xoshiro256PlusPlus(seed)
     var rng2 = Xoshiro256PlusPlus(seed)
     var rng3 = Xoshiro256PlusPlus(seed)

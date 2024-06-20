@@ -14,15 +14,7 @@
 
 from math import sqrt, log, cos
 from utils.numerics import max_finite
-
-
-trait PRNGEngine(Movable):
-    # @staticmethod
-    # fn return_type() -> DType:
-    #     pass
-
-    fn __call__(inout self) -> UInt64:
-        pass
+from stochasticity.traits import *
 
 
 # @register_passable("trivial")
@@ -59,9 +51,10 @@ struct PRNG[T: PRNGEngine]:
         return sd * sqrt(-2 * log(a)) * cos(pi2 * b) + mean
 
 
-# from stochasticity.splitmix import SplitMix
+from stochasticity.xoshiro import *
 
 
-# fn main():
-#     var rng = PRNG(SplitMix())
-#     print(rng.uniform_uint())
+fn main():
+    var eng = Xoshiro256PlusPlus()
+    var rng = PRNG(eng)
+    print(rng.uniform_uint())

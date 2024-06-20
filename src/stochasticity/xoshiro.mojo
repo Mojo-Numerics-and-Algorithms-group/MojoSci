@@ -13,28 +13,30 @@
 
 from time import now
 from bit import rotate_bits_left
-from stochasticity.splitmix import SplitMix
+from .splitmix import SplitMix
+from .traits import *
 
 @always_inline
-fn xoshiro256_plus(s0: UInt64, s1: UInt64, s2: UInt64, s3: UInt64) -> UInt64:
-    """Scrambler for xoshiro plus generator with 256-bits of state."""
+fn xoshiro256_plus[n: Int, T: DType](s0: SIMD[T, n], s1: SIMD[T, n], s2: SIMD[T, n], s3: SIMD[T, n]) -> SIMD[T, n]:
+    """Mixer for xoshiro plus generator with 256-bits of state."""
     return s0 + s3
 
 
 @always_inline
-fn xoshiro256_plus_plus(s0: UInt64, s1: UInt64, s2: UInt64, s3: UInt64) -> UInt64:
-    """Scrambler for xoshiro plus-plus generator with 256-bits of state."""
+fn xoshiro256_plus_plus[n: Int, T: DType](s0: SIMD[T, n], s1: SIMD[T, n], s2: SIMD[T, n], s3: SIMD[T, n]) -> SIMD[T, n]:
+    """Mixer for xoshiro plus-plus generator with 256-bits of state."""
     return rotate_bits_left[23](s0 + s3) + s0
 
 
 @always_inline
-fn xoshiro256_star_star(s0: UInt64, s1: UInt64, s2: UInt64, s3: UInt64) -> UInt64:
-     """Scrambler for xoshiro star-star generator with 256-bits of state."""
+fn xoshiro256_star_star[n: Int, T: DType](s0: SIMD[T, n], s1: SIMD[T, n], s2: SIMD[T, n], s3: SIMD[T, n]) -> SIMD[T, n]:
+     """Mixer for xoshiro star-star generator with 256-bits of state."""
     return rotate_bits_left[7](s1 * 5) * 9
 
+alias MixerType = fn[n: Int, T: DType](SIMD[T, n], SIMD[T, n], SIMD[T, n], SIMD[T, n]) -> SIMD[T, n]
 
 @register_passable("trivial")
-struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
+struct Xoshiro256[mixer: MixerType]:
     """Engine for xoshiro generators with 256-bits of state."""
 
     alias StateType = UInt64
@@ -100,7 +102,7 @@ struct Xoshiro256[scrambler: fn (UInt64, UInt64, UInt64, UInt64) -> UInt64]:
     @always_inline
     fn next(inout self) -> Self.ValueType:
         """Return the next value in the sequence."""
-        var res = scrambler(self.s0, self.s1, self.s2, self.s3)
+        var res = mixer(self.s0, self.s1, self.s2, self.s3)
         self.step()
         return res
 
@@ -208,7 +210,7 @@ alias Xoshiro256PlusPlus = Xoshiro256[xoshiro256_plus_plus]
 alias Xoshiro256StarStar = Xoshiro256[xoshiro256_star_star]
 
 @register_passable("trivial")
-struct Xoshiro256PlusPlusSIMD[n: Int]:
+struct Xoshiro256Vect[n: Int, mixer: MixerType]:
     """Compute n parallel streams."""
 
     alias StateType = SIMD[DType.uint64, n]
@@ -248,7 +250,7 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
         and assigning the jumped state to the next generator.
         This will result in independent streams, which will be
         returned as n-values in a SIMD."""
-        var seedr = Xoshiro256PlusPlus(self.seed)
+        var seedr = Xoshiro256[mixer](self.seed)
         for i in range(n):
             self.s0[i] = seedr.s0
             self.s1[i] = seedr.s1
@@ -284,7 +286,7 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
         """Return the next value in the sequence.
         
         The nth stream value will be in result[n - 1]."""
-        var res = rotate_bits_left[23](self.s0 + self.s3) + self.s0
+        var res = mixer(self.s0, self.s1, self.s2, self.s3)
         self.step()
         return res
 
@@ -293,7 +295,7 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
         
         Using this method may not result in
         non-overlapping streams."""
-        var jumpr = Xoshiro256PlusPlus()
+        var jumpr = Xoshiro256[mixer]()
         for i in range(n):
             jumpr.s0 = self.s0[i]
             jumpr.s1 = self.s1[i]
@@ -311,7 +313,7 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
         
         Using this method may not result in
         non-overlapping streams."""
-        var jumpr = Xoshiro256PlusPlus()
+        var jumpr = Xoshiro256[mixer]()
         for i in range(n):
             jumpr.s0 = self.s0[i]
             jumpr.s1 = self.s1[i]
@@ -324,11 +326,14 @@ struct Xoshiro256PlusPlusSIMD[n: Int]:
             self.s3[i] = jumpr.s3
 
     @always_inline
-    fn __call__(inout self) -> Self.ValueType:
+    fn __call__(inout self) -> Self.StateType:
         """Same as calling next()."""
         return self.next()
 
+alias Xoshiro256VectPlus = Xoshiro256Vect[mixer = xoshiro256_plus]
+alias Xoshiro256VectPlusPlus = Xoshiro256Vect[mixer = xoshiro256_plus_plus]
+alias Xoshiro256VectStarStar = Xoshiro256Vect[mixer = xoshiro256_star_star]
 
-fn main():
-    var rng = Xoshiro256PlusPlus()
-    print(rng.next())
+# fn main():
+#     var rng = Xoshiro256VectPlusPlus[16]()
+#     print(rng.next())
