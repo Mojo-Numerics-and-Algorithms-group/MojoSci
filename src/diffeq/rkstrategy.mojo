@@ -20,6 +20,10 @@ from linalg.static_matrix import (
 
 trait RKStrategy:
     @staticmethod
+    fn description() -> String:
+        pass
+
+    @staticmethod
     fn is_embedded() -> Bool:
         pass
 
@@ -53,6 +57,10 @@ trait RKStrategy:
 
 
 struct Euler(RKStrategy):
+    @staticmethod
+    fn description() -> String:
+        return "Basic Euler method"
+
     @staticmethod
     fn is_embedded() -> Bool:
         return False
@@ -89,6 +97,10 @@ struct Euler(RKStrategy):
 
 struct BackwardEuler(RKStrategy):
     @staticmethod
+    fn description() -> String:
+        return "Backward (implicit) Euler strategy"
+
+    @staticmethod
     fn is_embedded() -> Bool:
         return False
 
@@ -123,6 +135,10 @@ struct BackwardEuler(RKStrategy):
 
 
 struct LStable(RKStrategy):
+    @staticmethod
+    fn description() -> String:
+        return "Four-stage, 3rd order, L-stable Diagonally Implicit Runga-Kutta"
+
     @staticmethod
     fn is_embedded() -> Bool:
         return False
@@ -168,6 +184,10 @@ struct LStable(RKStrategy):
 
 struct RK4(RKStrategy):
     @staticmethod
+    fn description() -> String:
+        return "Standard 4th order Runga-Kutta"
+
+    @staticmethod
     fn is_embedded() -> Bool:
         return False
 
@@ -211,6 +231,13 @@ struct RK4(RKStrategy):
 
 
 struct RK45(RKStrategy):
+    @staticmethod
+    fn description() -> String:
+        return (
+            "Dormand-Prince 5th order Runga-Kutta with error estimation and"
+            " adaptive step sizes"
+        )
+
     @staticmethod
     fn is_embedded() -> Bool:
         return True
