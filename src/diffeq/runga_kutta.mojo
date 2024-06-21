@@ -81,13 +81,13 @@ struct RKStepper[Strategy: RKStrategy, Sys: DESys, n: Int]:
 # from diffeq.rkstrategy import RK4, RK45, LStable
 
 
-# fn main() raises:
-#     var grad = Lorenz(10, 28, 8 / 3)
-#     var s0 = ColVec[3](2.0, 1.0, 1.0)
-#     var stepper = RKStepper[RK45](grad, s0, 1)
-#     for _ in range(30):
-#         print("t =", stepper.t, end=": ")
-#         for i in range(3):
-#             print(stepper.state[i], end=" ")
-#         print()
-#         stepper.step()
+fn main() raises:
+    var grad = Lorenz(10, 28, 8 / 3)
+    var s0 = ColVec[3](2.0, 1.0, 1.0)
+    var stepper = RKStepper[RK45](grad, s0, 1)
+    for _ in range(30):
+        print("t =", stepper.t, end=": ")
+        for i in range(3):
+            print(stepper.state[i], end=" ")
+        print()
+        stepper.step()

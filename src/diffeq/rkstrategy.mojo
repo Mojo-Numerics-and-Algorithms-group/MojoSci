@@ -266,12 +266,6 @@ struct RK45(RKStrategy):
     @staticmethod
     fn weights[n: Int]() -> ColVec[n]:
         return ColVec[n](
-            35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0
-        )
-
-    @staticmethod
-    fn weights2[n: Int]() -> ColVec[n]:
-        return ColVec[n](
             5179 / 57600,
             0,
             7571 / 16695,
@@ -279,4 +273,10 @@ struct RK45(RKStrategy):
             -92097 / 339200,
             187 / 2100,
             1 / 40,
+        )
+
+    @staticmethod
+    fn weights2[n: Int]() -> ColVec[n]:
+        return ColVec[n](
+            35 / 384, 0, 500 / 1113, 125 / 192, -2187 / 6784, 11 / 84, 0
         )
