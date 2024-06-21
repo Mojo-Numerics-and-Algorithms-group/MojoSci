@@ -11,20 +11,25 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
+from diffeq.desys import DESys
 
-from .desys import *
+from linalg.static_matrix import (
+    StaticMat as Mat,
+    StaticColVec as ColVec,
+    StaticRowVec as RowVec,
+)
 
 
-struct EulerSteoper[S: DESys]:
+struct EulerSteoper[S: DESys, n: Int]:
     """Step a differential system using the Euler method."""
 
-    var state: List[Float64]
+    var state: ColVec[n]
     var dt: Float64
     var t: Float64
     var sys: S
 
     fn __init__(
-        inout self, sys: S, state: List[Float64], dt: Float64, t0: Float64 = 0
+        inout self, sys: S, state: ColVec[n], dt: Float64, t0: Float64 = 0
     ) raises:
         if len(state) != S.ndim():
             raise Error("Initial state has the wrong number of dimensions")
@@ -34,10 +39,5 @@ struct EulerSteoper[S: DESys]:
         self.t = t0
 
     fn step(inout self):
-        var dy = self.sys.deriv(self.t, self.state)
-
-        @parameter
-        for i in range(S.ndim()):
-            self.state[i] += dy[i] * self.dt
-
+        self.state += self.sys.deriv(self.t, self.state) * self.dt
         self.t += self.dt
