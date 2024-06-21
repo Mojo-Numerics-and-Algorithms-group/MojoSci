@@ -31,7 +31,45 @@ On my laptop, the Xoshiro Plus Plus generates 64 Gbps of pseudo-entropy. Using S
 
 ## ODE Integration
 
-I added some basic routines for ODE integration. This will need lots of work to generalize.
+I have finished the first phase of the code for integrating differential equations. It is remarkable to me how Mojo + metaprogramming facilitates simple, yet efficient code. Here is an example.
+```mojo
+@value
+struct Lorenz(DESys):
+    var p1: Float64
+    var p2: Float64
+    var p3: Float64
+
+    fn __init__(inout self, p1: Float64, p2: Float64, p3: Float64):
+        self.p1 = p1
+        self.p2 = p2
+        self.p3 = p3
+
+    @always_inline
+    fn deriv[n: Int](self, t: Float64, s: ColVec[n]) -> ColVec[n]:
+        return ColVec[n](
+            self.p1 * (s.get[1]() - s.get[0]()),
+            s.get[0]() * (self.p2 - s.get[2]()) - s.get[1](),
+            s.get[0]() * s.get[1]() - self.p3 * s.get[2](),
+        )
+
+    @staticmethod
+    fn ndim() -> Int:
+        return 3
+
+fn main() raises:
+    var grad = Lorenz(10, 28, 8 / 3)
+    var s0 = ColVec[3](2.0, 1.0, 1.0)
+    var stepper = RKStepper[RK45](grad, s0, dt = 1)
+    for _ in range(30):
+        print("t =", stepper.t, end=": ")
+        for i in range(3):
+            print(stepper.state[i], end=" ")
+        print()
+        stepper.step()
+```
+A really nice aspect of this is that the integration strategies are separated from the stepper. The `RK45` type fulfills the triats `RKStrategy` and provides all the necessary information (the Butcher Tableau) for the Dormand-Prince adaptive integraiton method. You can easily add new strategies by creating a new type fulfilling the `RKStrategy` traits.
+
+I still need to write traits for an observer/recorder type that will manage the outer loop and log the output. 
 
 ## Linear algebra
 
