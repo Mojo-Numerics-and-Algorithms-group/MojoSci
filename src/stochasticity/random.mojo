@@ -13,16 +13,11 @@
 
 
 from math import sqrt, log, cos
-from utils.numerics import max_finite
-from stochasticity.traits import *
+from stochasticity.prng_traits import PRNGEngine
 
 
 # @register_passable("trivial")
 struct PRNG[T: PRNGEngine]:
-    # alias EngineReturnType: DType = T.return_type()
-    # alias max_value = max_finite[Self.EngineReturnType]()
-    alias max_value = UInt64.MAX_FINITE
-
     var engine: T
 
     fn __init__(inout self, owned engine: T):
@@ -30,14 +25,15 @@ struct PRNG[T: PRNGEngine]:
 
     fn uniform_uint(inout self, min: UInt64 = 0, max: UInt64 = 1) -> UInt64:
         """Generate uniform random unsigned integers."""
-        var res = self.engine()
+        var res = self.engine.scalar()
         var scaled = res % (max - min + 1)
         return scaled + min
 
     fn uniform(inout self, min: Float64 = 0, max: Float64 = 1) -> Float64:
         """Generate uniform random floats."""
-        var res = self.engine().cast[DType.float64]()
-        var scaled = res / self.max_value.cast[DType.float64]()
+        alias max_val = UInt64.MAX_FINITE
+        var res = self.engine.scalar()
+        var scaled = res.cast[DType.float64]() / max_val.cast[DType.float64]()
         return (max - min) * scaled + min
 
     fn normal(inout self, mean: Float64 = 0, sd: Float64 = 1) -> Float64:
@@ -46,15 +42,21 @@ struct PRNG[T: PRNGEngine]:
         This method is not highly accurate in the
         tails of the distrubtion."""
         alias pi2: Float64 = 6.28318530718
-        var a: Float64 = self.uniform(min=1e-7)
-        var b: Float64 = self.uniform()
+        var a = self.uniform(min=1e-7)
+        var b = self.uniform()
         return sd * sqrt(-2 * log(a)) * cos(pi2 * b) + mean
+
+    fn exp(inout self, mean: Float64 = 1) raises -> Float64:
+        """Generates an exponentially distributed random number."""
+        if mean <= 0:
+            raise Error("Exponential mean must be postive.")
+        return -log(self.uniform()) * mean
 
 
 from stochasticity.xoshiro import *
 
 
-fn main():
+fn main() raises:
     var eng = Xoshiro256PlusPlus()
     var rng = PRNG(eng)
-    print(rng.uniform_uint())
+    print(rng.exp())

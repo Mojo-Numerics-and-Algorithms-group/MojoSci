@@ -13,9 +13,6 @@
 
 
 trait PRNGEngine(Movable):
-    # @staticmethod
-    # fn return_type() -> DType:
-    #     pass
-
-    fn __call__(inout self) -> Self.StateType:
+    fn scalar(inout self) -> UInt64:
+        """Get only a single value from the generator."""
         pass
