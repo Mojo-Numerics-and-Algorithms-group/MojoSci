@@ -15,11 +15,6 @@
 from utils import StaticTuple
 from math import isclose
 
-# A few design notes
-# a) I am not using references as it seems lifetimes are still being worked out
-# b) I am not parallelizing as it may be counter productive for tiny 2x2 matrices, etc.
-# c) For now there is no point in making this generic over the element type
-
 @value
 @register_passable("trivial")
 struct StaticMat[rows: Int, cols: Int](Sized):
@@ -30,9 +25,9 @@ struct StaticMat[rows: Int, cols: Int](Sized):
     alias StorageType = StaticTuple[Self.ElementType, Self.storage_size]
     var elements: Self.StorageType
 
-    # ==========================================
-    # Initializations
-    # ==========================================
+# ===----------------------------------------------------------------------=== #
+#   Initializations
+# ===----------------------------------------------------------------------=== #
 
     @always_inline
     fn __init__(inout self):
@@ -70,17 +65,17 @@ struct StaticMat[rows: Int, cols: Int](Sized):
         """Initialize matrix and fill from variadic list of values."""
         self.elements = Self.StorageType(values)
 
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
     # Sized trait
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
 
     @always_inline
     fn __len__(self) -> Int:
         return self.storage_size
 
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
     # Runtime modification
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
 
     @always_inline
     fn fill(inout self, value: Self.ElementType):
@@ -102,9 +97,9 @@ struct StaticMat[rows: Int, cols: Int](Sized):
         for i in range(diag_len):
             self.set[i, i](value)
 
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
     # Run-time indexed access
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
 
     @always_inline
     fn pos(self, row: Int, col: Int) -> Int:
@@ -151,9 +146,9 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
         return res
 
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
     # Run-time indexed modification
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
 
     @always_inline
     fn __setitem__(inout self, index: Int, value: Self.ElementType) raises:
@@ -190,15 +185,24 @@ struct StaticMat[rows: Int, cols: Int](Sized):
                 self.elements[self.pos(row, col2)],
             )
 
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
     # Compile-time indexed access
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
+
+    @always_inline
+    fn pos[i: Int](self) -> Int:
+        constrained[i >= 0 and i < self.storage_size, "Row index out of bounds"]()
+        return i
 
     @always_inline
     fn pos[row: Int, col: Int](self) -> Int:
         constrained[row >= 0 and row < rows, "Row index out of bounds"]()
         constrained[col >= 0 and col < cols, "Col index out of bounds"]()
         return col * rows + row
+
+    @always_inline
+    fn get[i: Int](self) -> Self.ElementType:
+        return self.elements[self.pos[i]()]
 
     @always_inline
     fn get[row: Int, col: Int](self) -> Self.ElementType:
@@ -224,9 +228,9 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
         return res
 
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
     # Compile-time indexed modification
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
 
     @always_inline
     fn set[row: Int, col: Int](inout self, value: Self.ElementType):
@@ -260,9 +264,9 @@ struct StaticMat[rows: Int, cols: Int](Sized):
             self.set[row, first](self.get[row, second]())
             self.set[row, second](tmp)
 
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
     # Matrix builders
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
 
     @staticmethod
     fn diag(value: Self.ElementType = 1) -> Self:
@@ -310,9 +314,9 @@ struct StaticMat[rows: Int, cols: Int](Sized):
         """Create zeros matrix of matching dimensions."""
         return StaticRowVec[cols](1)
 
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
     # Predicates
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
 
     # TODO: Elementwise + all/any functions
     @always_inline
@@ -329,9 +333,9 @@ struct StaticMat[rows: Int, cols: Int](Sized):
     fn __ne__(self, other: Self) -> Bool:
         return ~self.__eq__(other)
 
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
     # Elementwise operators
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
 
     @always_inline
     fn __add__(self, other: Self) -> Self:
@@ -373,9 +377,36 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
         return res
 
-    # ==========================================
+    @always_inline
+    fn __iadd__(inout self, other: Self):
+
+        @parameter
+        for i in range(self.storage_size):
+            self.elements[i] += other.elements[i]
+
+    @always_inline
+    fn __sub__(inout self, other: Self):
+        @parameter
+        for i in range(self.storage_size):
+            self.elements[i] -= other.elements[i]
+
+    @always_inline
+    fn __mul__(inout self, other: Self):
+
+        @parameter
+        for i in range(self.storage_size):
+            self.elements[i] *= other.elements[i]
+
+    @always_inline
+    fn __truediv__(inout self, other: Self):
+
+        @parameter
+        for i in range(self.storage_size):
+            self.elements[i] /= other.elements[i]
+
+    # ===----------------------------------------------------------------------=== #
     # Scalar operators
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
 
     @always_inline
     fn __add__(self, other: Self.ElementType) -> Self:
@@ -461,9 +492,9 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
         return res
 
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
     # Matrix operators
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
 
     @always_inline
     fn __matmul__(self, other: StaticMat) -> StaticMat[rows, other.cols]:
@@ -520,9 +551,9 @@ struct StaticMat[rows: Int, cols: Int](Sized):
                 sum += self.elements[i]
         return sum
 
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
     # Matrix transforms
-    # ==========================================
+    # ===----------------------------------------------------------------------=== #
 
     @always_inline
     fn transpose(self) -> StaticMat[cols, rows]:
@@ -599,12 +630,16 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
         return (P, L, U)
 
-# ==========================================
+# ===----------------------------------------------------------------------=== #
 # Vector types
-# ==========================================
+# ===----------------------------------------------------------------------=== #
 
 alias StaticRowVec = StaticMat[1, _]
 alias StaticColVec = StaticMat[_, 1]
+
+fn to_scalar[n: Int, m: Int](owned x: StaticMat[n, m]) -> Float64:
+    constrained[n == 1 and m == 1, "Only 1x1 matrices can be converted to a scalar value."]()
+    return x.get[0, 0]()
 
 # fn main():
 #     var x = StaticMat[3, 3](1)
