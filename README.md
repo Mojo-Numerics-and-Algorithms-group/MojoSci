@@ -67,7 +67,7 @@ fn main() raises:
         print()
         stepper.step()
 ```
-A really nice aspect of this is that the integration strategies are separated from the stepper. The `RK45` type fulfills the triats `RKStrategy` and provides all the necessary information (the Butcher Tableau) for the Dormand-Prince adaptive integraiton method. You can easily add new strategies by creating a new type fulfilling the `RKStrategy` traits.
+A really nice aspect of this is that the integration strategies are separated from the stepper. The `RK45` type fulfills the [`RKStrategy` traits](https://github.com/Mojo-Numerics-and-Algorithms-group/MojoSci/blob/main/src/diffeq/rkstrategy.mojo) and provides all the necessary information (the Butcher Tableau) for the Dormand-Prince adaptive integraiton method. You can easily add new strategies by creating a new type fulfilling the `RKStrategy` traits.
 
 I still need to write traits for an observer/recorder type that will manage the outer loop and log the output. 
 
