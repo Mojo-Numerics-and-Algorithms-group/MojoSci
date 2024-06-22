@@ -129,6 +129,16 @@ struct Xoshiro256Vect[n: Int, mixer: MixerType]:
         self.step()
         return res
 
+    @always_inline
+    fn next_scalar(inout self) -> UInt64:
+        """Required for generics."""
+        return self.next()[0]
+
+    @always_inline
+    fn __call__(inout self) -> Self.ValueType:
+        """Same as calling next()."""
+        return self.next()
+
     fn jump(inout self):
         """Jump forward in the sequence.
         
@@ -222,16 +232,6 @@ struct Xoshiro256Vect[n: Int, mixer: MixerType]:
         self.s1 = s1
         self.s2 = s2
         self.s3 = s3
-
-    @always_inline
-    fn scalar(inout self) -> UInt64:
-        """Required for generics."""
-        return self.next()[0]
-
-    @always_inline
-    fn __call__(inout self) -> Self.ValueType:
-        """Same as calling next()."""
-        return self.next()
 
 alias Xoshiro256VectStarStar = Xoshiro256Vect[mixer = xoshiro256_star_star]
 alias Xoshiro256VectPlusPlus = Xoshiro256Vect[mixer = xoshiro256_plus_plus]

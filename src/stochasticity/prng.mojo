@@ -25,38 +25,38 @@ struct PRNG[T: PRNGEngine]:
 
     fn uniform_uint(inout self, min: UInt64 = 0, max: UInt64 = 1) -> UInt64:
         """Generate uniform random unsigned integers."""
-        var res = self.engine.scalar()
+        var res = self.engine.next_scalar()
         var scaled = res % (max - min + 1)
         return scaled + min
 
     fn uniform(inout self, min: Float64 = 0, max: Float64 = 1) -> Float64:
         """Generate uniform random floats."""
         alias max_val = UInt64.MAX_FINITE
-        var res = self.engine.scalar()
+        var res = self.engine.next_scalar()
         var scaled = res.cast[DType.float64]() / max_val.cast[DType.float64]()
         return (max - min) * scaled + min
 
     fn normal(inout self, mean: Float64 = 0, sd: Float64 = 1) -> Float64:
-        """Generate normal deviates.
-
-        This method is not highly accurate in the
-        tails of the distrubtion."""
+        """Generate normal deviates."""
         alias pi2: Float64 = 6.28318530718
         var a = self.uniform(min=1e-7)
-        var b = self.uniform()
-        return sd * sqrt(-2 * log(a)) * cos(pi2 * b) + mean
+        var b = self.uniform(max=pi2)
+        return sd * sqrt(-2 * log(a)) * cos(b) + mean
 
-    fn exp(inout self, mean: Float64 = 1) raises -> Float64:
-        """Generates an exponentially distributed random number."""
-        if mean <= 0:
-            raise Error("Exponential mean must be postive.")
+    fn bernoulli(inout self, p: Float64 = 0.5) -> Int:
+        if p > self.uniform():
+            return 0
+        else:
+            return 1
+
+    fn exp(inout self, mean: Float64 = 1) -> Float64:
         return -log(self.uniform()) * mean
 
 
-from stochasticity.xoshiro import *
+# from stochasticity.xoshiro import *
 
 
-fn main() raises:
-    var eng = Xoshiro256PlusPlus()
-    var rng = PRNG(eng)
-    print(rng.exp())
+# fn main() raises:
+#     var eng = Xoshiro256PlusPlus()
+#     var rng = PRNG(eng)
+#     print(rng.bernoulli())

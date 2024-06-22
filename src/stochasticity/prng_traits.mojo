@@ -13,6 +13,6 @@
 
 
 trait PRNGEngine(Movable):
-    fn scalar(inout self) -> UInt64:
+    fn next_scalar(inout self) -> UInt64:
         """Get only a single value from the generator."""
         pass
