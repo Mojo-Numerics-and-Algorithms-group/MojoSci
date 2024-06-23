@@ -13,6 +13,7 @@
 
 
 from math import sqrt, log, cos
+from utils.numerics import nextafter
 from stochasticity.prng_traits import PRNGEngine
 
 
@@ -31,15 +32,16 @@ struct PRNG[T: PRNGEngine]:
 
     fn uniform(inout self, min: Float64 = 0, max: Float64 = 1) -> Float64:
         """Generate uniform random floats."""
-        alias max_val = UInt64.MAX_FINITE
+        alias max_val = UInt64.MAX_FINITE.cast[DType.float64]()
         var res = self.engine.next_scalar()
-        var scaled = res.cast[DType.float64]() / max_val.cast[DType.float64]()
+        var scaled = res.cast[DType.float64]() / max_val
         return (max - min) * scaled + min
 
     fn normal(inout self, mean: Float64 = 0, sd: Float64 = 1) -> Float64:
         """Generate normal deviates."""
-        alias pi2: Float64 = 6.28318530718
-        var a = self.uniform(min=1e-7)
+        alias guard = nextafter(0.0, 1.0)
+        alias pi2 = 6.28318530718
+        var a = self.uniform(min=guard)
         var b = self.uniform(max=pi2)
         return sd * sqrt(-2 * log(a)) * cos(b) + mean
 

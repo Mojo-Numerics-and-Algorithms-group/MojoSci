@@ -13,10 +13,10 @@
 
 
 from time import now
-
+from stochasticity.prng_traits import PRNGEngine
 
 @register_passable("trivial")
-struct SplitMix:
+struct SplitMix(PRNGEngine):
     """SplitMix 64-bit pseudo-random generator."""
 
     alias SeedType = UInt64
@@ -25,6 +25,10 @@ struct SplitMix:
 
     var seed: Self.SeedType
     var state: Self.StateType
+
+    @staticmethod
+    fn ndim() -> Int:
+        return 1
 
     fn __init__(inout self, warmup: Int = 0):
         """Seed with current time.
@@ -73,7 +77,7 @@ struct SplitMix:
     fn step(inout self, times: Int):
         """Advance the generator by times steps."""
         for _ in range(times):
-            self.state += 0x9E3779B97F4A7C15
+            self.step()
 
     @always_inline
     fn next(inout self) -> Self.ValueType:
@@ -83,6 +87,10 @@ struct SplitMix:
         z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9
         z = (z ^ (z >> 27)) * 0x94D049BB133111EB
         return z ^ (z >> 31)
+
+    @always_inline
+    fn next_scalar(inout self) -> UInt64:
+        return self.next()
 
     @always_inline
     fn __call__(inout self) -> Self.ValueType:

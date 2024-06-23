@@ -37,7 +37,7 @@ fn xoshiro256_star_star[n: Int, T: DType](s0: SIMD[T, n], s1: SIMD[T, n], s2: SI
 alias MixerType = fn[n: Int, T: DType](SIMD[T, n], SIMD[T, n], SIMD[T, n], SIMD[T, n]) -> SIMD[T, n]
 
 @register_passable("trivial")
-struct Xoshiro256Vect[n: Int, mixer: MixerType]:
+struct Xoshiro256Vect[n: Int, mixer: MixerType](PRNGEngine):
     """Compute n parallel streams."""
 
     alias StateType = SIMD[DType.uint64, n]
@@ -76,8 +76,8 @@ struct Xoshiro256Vect[n: Int, mixer: MixerType]:
     fn reset(inout self):
          """Start the sequence over using the current seed value.
          
-        The first stream is seeded just as Xoshiro256PlusPlus.
-        The other n-1 streams are seeded by taking a jump
+        The scalar engine is seeded by SplitMix. If there are more
+        dimentions, other n-1 streams are seeded by taking a jump
         and assigning the jumped state to the next generator.
         This will result in independent streams, which will be
         returned as n-values in a SIMD."""
@@ -243,4 +243,4 @@ alias Xoshiro256Plus = Xoshiro256VectPlus[n = 1]
 # fn main():
 #     var rng = Xoshiro256VectPlusPlus[4]()
 #     print(rng.get_seed())
-#     print(rng.scalar())
+#     print(rng.next_scalar())
