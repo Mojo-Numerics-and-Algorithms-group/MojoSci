@@ -11,49 +11,13 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
+from diffeq.diffeq_traits import RKStrategy, RKEmbeddedStrategy
+
 from linalg.static_matrix import (
     StaticMat as Mat,
     StaticColVec as ColVec,
     StaticRowVec as RowVec,
 )
-
-
-trait RKStrategy:
-    @staticmethod
-    fn description() -> String:
-        pass
-
-    @staticmethod
-    fn is_embedded() -> Bool:
-        pass
-
-    @staticmethod
-    fn order() -> Int:
-        pass
-
-    @staticmethod
-    fn order2() -> Int:
-        pass
-
-    @staticmethod
-    fn stages() -> Int:
-        pass
-
-    @staticmethod
-    fn coefs[i: Int, n: Int]() -> ColVec[n]:
-        pass
-
-    @staticmethod
-    fn strides[n: Int]() -> ColVec[n]:
-        pass
-
-    @staticmethod
-    fn weights[n: Int]() -> ColVec[n]:
-        pass
-
-    @staticmethod
-    fn weights2[n: Int]() -> ColVec[n]:
-        pass
 
 
 struct Euler(RKStrategy):
@@ -62,15 +26,11 @@ struct Euler(RKStrategy):
         return "Basic Euler method"
 
     @staticmethod
-    fn is_embedded() -> Bool:
-        return False
+    fn reference() -> String:
+        return "Please add a reference!"
 
     @staticmethod
     fn order() -> Int:
-        return 1
-
-    @staticmethod
-    fn order2() -> Int:
         return 1
 
     @staticmethod
@@ -90,10 +50,6 @@ struct Euler(RKStrategy):
     fn weights[n: Int]() -> ColVec[n]:
         return ColVec[n](1)
 
-    @staticmethod
-    fn weights2[n: Int]() -> ColVec[n]:
-        return ColVec[n](1)
-
 
 struct BackwardEuler(RKStrategy):
     @staticmethod
@@ -101,15 +57,11 @@ struct BackwardEuler(RKStrategy):
         return "Backward (implicit) Euler strategy"
 
     @staticmethod
-    fn is_embedded() -> Bool:
-        return False
+    fn reference() -> String:
+        return "Please add a reference!"
 
     @staticmethod
     fn order() -> Int:
-        return 1
-
-    @staticmethod
-    fn order2() -> Int:
         return 1
 
     @staticmethod
@@ -129,10 +81,6 @@ struct BackwardEuler(RKStrategy):
     fn weights[n: Int]() -> ColVec[n]:
         return ColVec[n](1)
 
-    @staticmethod
-    fn weights2[n: Int]() -> ColVec[n]:
-        return ColVec[n](1)
-
 
 struct LStable(RKStrategy):
     @staticmethod
@@ -140,15 +88,11 @@ struct LStable(RKStrategy):
         return "Four-stage, 3rd order, L-stable Diagonally Implicit Runga-Kutta"
 
     @staticmethod
-    fn is_embedded() -> Bool:
-        return False
+    fn reference() -> String:
+        return "Please add a reference!"
 
     @staticmethod
     fn order() -> Int:
-        return 3
-
-    @staticmethod
-    fn order2() -> Int:
         return 3
 
     @staticmethod
@@ -157,7 +101,7 @@ struct LStable(RKStrategy):
 
     @staticmethod
     fn coefs[i: Int, n: Int]() -> ColVec[n]:
-        constrained[i >= 0 and i < n, "Coefficient stage index out of range."]()
+        constrained[i >= 0 and i < 4, "Coefficient stage index out of range."]()
 
         @parameter
         if i == 0:
@@ -177,10 +121,6 @@ struct LStable(RKStrategy):
     fn weights[n: Int]() -> ColVec[n]:
         return ColVec[n](3 / 2, -3 / 2, 1 / 2, 1 / 2)
 
-    @staticmethod
-    fn weights2[n: Int]() -> ColVec[n]:
-        return ColVec[n](3 / 2, -3 / 2, 1 / 2, 1 / 2)
-
 
 struct RK4(RKStrategy):
     @staticmethod
@@ -188,15 +128,11 @@ struct RK4(RKStrategy):
         return "Standard 4th order Runga-Kutta"
 
     @staticmethod
-    fn is_embedded() -> Bool:
-        return False
+    fn reference() -> String:
+        return "Please add a reference!"
 
     @staticmethod
     fn order() -> Int:
-        return 4
-
-    @staticmethod
-    fn order2() -> Int:
         return 4
 
     @staticmethod
@@ -205,7 +141,7 @@ struct RK4(RKStrategy):
 
     @staticmethod
     fn coefs[i: Int, n: Int]() -> ColVec[n]:
-        constrained[i >= 0 and i < n, "Coefficient stage index out of range."]()
+        constrained[i >= 0 and i < 4, "Coefficient stage index out of range."]()
 
         @parameter
         if i == 0:
@@ -225,22 +161,15 @@ struct RK4(RKStrategy):
     fn weights[n: Int]() -> ColVec[n]:
         return ColVec[n](1 / 6, 1 / 3, 1 / 3, 1 / 6)
 
-    @staticmethod
-    fn weights2[n: Int]() -> ColVec[n]:
-        return ColVec[n](1 / 6, 1 / 3, 1 / 3, 1 / 6)
 
-
-struct RK45(RKStrategy):
+struct RK45(RKEmbeddedStrategy):
     @staticmethod
     fn description() -> String:
-        return (
-            "Dormand-Prince 5th order Runga-Kutta with error estimation and"
-            " adaptive step sizes"
-        )
+        return "Dormand-Prince 5th order embedded Runga-Kutta"
 
     @staticmethod
-    fn is_embedded() -> Bool:
-        return True
+    fn reference() -> String:
+        return "Please add a reference!"
 
     @staticmethod
     fn order() -> Int:
@@ -256,7 +185,7 @@ struct RK45(RKStrategy):
 
     @staticmethod
     fn coefs[i: Int, n: Int]() -> ColVec[n]:
-        constrained[i >= 0 and i < n, "Coefficient stage index out of range."]()
+        constrained[i >= 0 and i < 7, "Coefficient stage index out of range."]()
 
         @parameter
         if i == 0:
