@@ -22,14 +22,7 @@ trait DESys(Copyable):
     """Required methods defining a differential system."""
 
     fn deriv[n: Int](self, t: Float64, s: ColVec[n]) -> ColVec[n]:
-        """Return dY.
-
-        Paratmeters:
-            S (ListLike): A type meeting the ListLike trait requirements.
-
-        Args:
-            t (Float64): the current time step.
-            s (S): the system state."""
+        """Return dY."""
         pass
 
     @staticmethod
