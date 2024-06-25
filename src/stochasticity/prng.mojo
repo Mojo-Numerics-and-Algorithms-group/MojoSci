@@ -12,8 +12,8 @@
 # ===----------------------------------------------------------------------=== #
 
 
-from math import sqrt, log, cos
 from utils.numerics import nextafter
+from math import sqrt, log, cos, acos
 from stochasticity.prng_traits import PRNGEngine
 
 
@@ -40,7 +40,7 @@ struct PRNG[T: PRNGEngine]:
     fn normal(inout self, mean: Float64 = 0, sd: Float64 = 1) -> Float64:
         """Generate normal deviates."""
         alias guard = nextafter(0.0, 1.0)
-        alias pi2 = 6.28318530718
+        alias pi2 = acos(-1.0)
         var a = self.uniform(min=guard)
         var b = self.uniform(max=pi2)
         return sd * sqrt(-2 * log(a)) * cos(b) + mean

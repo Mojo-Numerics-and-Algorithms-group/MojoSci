@@ -22,6 +22,7 @@ trait StateStepper:
     fn step(inout self):
         pass
 
+
 trait SelfDocumenting:
     @staticmethod
     fn description() -> String:
@@ -32,7 +33,7 @@ trait SelfDocumenting:
         pass
 
 
-trait RKStrategy(SelfDocumenting):
+trait ExplicitRK(SelfDocumenting):
     @staticmethod
     fn order() -> Int:
         pass
@@ -54,11 +55,59 @@ trait RKStrategy(SelfDocumenting):
         pass
 
 
-trait RKEmbeddedStrategy(RKStrategy):
+trait EmbeddedRK(ExplicitRK):
     @staticmethod
     fn order2() -> Int:
         pass
 
     @staticmethod
     fn weights2[n: Int]() -> ColVec[n]:
+        pass
+
+
+trait FSALEmbeddedRK(EmbeddedRK):
+    pass
+
+
+trait ImplicitRK(SelfDocumenting):
+    @staticmethod
+    fn order() -> Int:
+        pass
+
+    @staticmethod
+    fn stages() -> Int:
+        pass
+
+    @staticmethod
+    fn coefs[i: Int, n: Int]() -> ColVec[n]:
+        pass
+
+    @staticmethod
+    fn strides[n: Int]() -> ColVec[n]:
+        pass
+
+    @staticmethod
+    fn weights[n: Int]() -> ColVec[n]:
+        pass
+
+
+trait DIRK(SelfDocumenting):
+    @staticmethod
+    fn order() -> Int:
+        pass
+
+    @staticmethod
+    fn stages() -> Int:
+        pass
+
+    @staticmethod
+    fn coefs[i: Int, n: Int]() -> ColVec[n]:
+        pass
+
+    @staticmethod
+    fn strides[n: Int]() -> ColVec[n]:
+        pass
+
+    @staticmethod
+    fn weights[n: Int]() -> ColVec[n]:
         pass

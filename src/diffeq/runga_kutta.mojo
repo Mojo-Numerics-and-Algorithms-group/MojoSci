@@ -12,7 +12,7 @@
 # ===----------------------------------------------------------------------=== #
 
 from diffeq.desys import DESys
-from diffeq.diffeq_traits import RKStrategy, RKEmbeddedStrategy, StateStepper
+from diffeq.diffeq_traits import ExplicitRK, EmbeddedRK, StateStepper
 
 from linalg.static_matrix import (
     StaticMat as Mat,
@@ -21,11 +21,10 @@ from linalg.static_matrix import (
 )
 
 
-struct RKFixedStepper[Strategy: RKStrategy, Sys: DESys, n: Int](StateStepper):
+struct RKFixedStepper[Strategy: ExplicitRK, Sys: DESys, n: Int](StateStepper):
     alias StateType = ColVec[n]
 
     var state: Self.StateType
-    var tol: Float64
     var dt: Float64
     var t: Float64
     var sys: Sys
@@ -36,13 +35,11 @@ struct RKFixedStepper[Strategy: RKStrategy, Sys: DESys, n: Int](StateStepper):
         state: Self.StateType,
         dt: Float64,
         t0: Float64 = 0,
-        tol: Float64 = 1e-9,
     ) raises:
         if len(state) != Sys.ndim():
             raise Error("Initial state has the wrong number of dimensions")
         self.sys = sys
         self.state = state
-        self.tol = tol
         self.dt = dt
         self.t = t0
 
@@ -64,7 +61,7 @@ struct RKFixedStepper[Strategy: RKStrategy, Sys: DESys, n: Int](StateStepper):
         self.t += self.dt
 
 
-struct RKAdaptiveStepper[Strategy: RKEmbeddedStrategy, Sys: DESys, n: Int](
+struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
     StateStepper
 ):
     alias StateType = ColVec[n]
@@ -91,6 +88,7 @@ struct RKAdaptiveStepper[Strategy: RKEmbeddedStrategy, Sys: DESys, n: Int](
         self.dt = dt
         self.t = t0
 
+    # TODO: Handle FSAL
     fn step(inout self):
         alias p = Strategy.order2()
         alias w1 = Strategy.weights[m]()
@@ -107,15 +105,16 @@ struct RKAdaptiveStepper[Strategy: RKEmbeddedStrategy, Sys: DESys, n: Int](
             var s = self.state + k @ coefs * self.dt
             k.set_col[i](self.sys.deriv(t, s))
 
-        alias dw = w2 - w1
+        alias dw = w1 - w2
         var err = k @ dw * self.dt
         if err.max_value() < self.tol:
-            self.state += k @ w2 * self.dt
+            self.state += k @ w1 * self.dt
             self.t += self.dt
         var s = (self.tol / err.max_value() / 2) ** (1 / p)
         self.dt *= max(min(s, 4), 1 / 4)
 
 
+""" 
 from diffeq.desys import Lorenz
 from diffeq.rkstrategy import RK4, RK45, LStable
 
@@ -130,3 +129,4 @@ fn main() raises:
             print(stepper.state[i], end=" ")
         print()
         stepper.step()
+"""
