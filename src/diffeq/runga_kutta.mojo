@@ -11,8 +11,7 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from diffeq.desys import DESys
-from diffeq.diffeq_traits import ExplicitRK, EmbeddedRK, StateStepper
+from diffeq.diffeq_traits import DESys, ExplicitRK, EmbeddedRK, StateStepper
 
 from linalg.static_matrix import (
     StaticMat as Mat,

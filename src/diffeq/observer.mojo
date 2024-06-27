@@ -11,6 +11,8 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
+from diffeq.diffeq_traits import StepLogger
+
 from linalg.static_matrix import (
     StaticMat as Mat,
     StaticColVec as ColVec,
@@ -18,31 +20,26 @@ from linalg.static_matrix import (
 )
 
 
-# Arghhhh!
-trait RKObserver[n: Int]:
+struct NullLogger(StepLogger):
     fn __init__(inout self):
         pass
 
-    fn observe(inout self, t: Float64, s: ColVec[n]):
+    fn log[n: Int](inout self, t: Float64, s: ColVec[n]) raises:
         pass
 
 
-struct NullRKObserver[n: Int](RKObserver):
-    fn __init__(inout self):
-        pass
-
-    fn observe(inout self, t: Float64, s: ColVec[n]):
-        pass
-
-
-struct RKObserverAll[n: Int](RKObserver):
+struct StateLogger[m: Int](StepLogger):
     var t: List[Float64]
-    var state: List[ColVec[n]]
+    var state: List[ColVec[m]]
 
     fn __init__(inout self):
         self.t = List[Float64]()
-        self.state = List[ColVec[n]]()
+        self.state = List[ColVec[m]]()
 
-    fn observe(inout self, t: Float64, s: ColVec[n]):
+    fn log[n: Int](inout self, t: Float64, s: ColVec[n]) raises:
+        constrained[m == n, "Invalid state size"]()
         self.t.append(t)
-        self.state.append(s)
+        var ss = ColVec[m]()  # No parameterized traits yet :-(
+        for i in range(len(s)):
+            ss[i] = s[i]
+        self.state.append(ss)

@@ -18,6 +18,27 @@ from linalg.static_matrix import (
 )
 
 
+trait StepLogger:
+    fn __init__(inout self):
+        pass
+
+    fn log[n: Int](inout self, t: Float64, s: ColVec[n]) raises:
+        pass
+
+
+trait DESys(Copyable):
+    """Required methods defining a differential system."""
+
+    fn deriv[n: Int](self, t: Float64, s: ColVec[n]) -> ColVec[n]:
+        """Return dY."""
+        pass
+
+    @staticmethod
+    fn ndim() -> Int:
+        """The number of state variables."""
+        pass
+
+
 trait StateStepper:
     fn step(inout self):
         pass

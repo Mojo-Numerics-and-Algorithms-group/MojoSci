@@ -11,24 +11,13 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
+from diffeq.diffeq_traits import DESys
+
 from linalg.static_matrix import (
     StaticMat as Mat,
     StaticColVec as ColVec,
     StaticRowVec as RowVec,
 )
-
-
-trait DESys(Copyable):
-    """Required methods defining a differential system."""
-
-    fn deriv[n: Int](self, t: Float64, s: ColVec[n]) -> ColVec[n]:
-        """Return dY."""
-        pass
-
-    @staticmethod
-    fn ndim() -> Int:
-        """The number of state variables."""
-        pass
 
 
 @value
