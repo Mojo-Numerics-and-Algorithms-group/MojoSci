@@ -11,7 +11,15 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from diffeq.diffeq_traits import DESys, ExplicitRK, EmbeddedRK, StateStepper
+from diffeq.traits import (
+    DESys,
+    ExplicitRK,
+    EmbeddedRK,
+    StateStepper,
+    StepLogger,
+)
+
+from diffeq.observer import NullLogger, StateLogger
 
 from linalg.static_matrix import (
     StaticMat as Mat,
@@ -87,8 +95,11 @@ struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
         self.dt = dt
         self.t = t0
 
-    # TODO: Handle FSAL
     fn step(inout self):
+        var obs = NullLogger[n]()
+        self.step(obs)
+
+    fn step[S: StepLogger](inout self, inout obs: S):
         alias p = Strategy.order2()
         alias w1 = Strategy.weights[m]()
         alias w2 = Strategy.weights2[m]()
@@ -106,26 +117,25 @@ struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
 
         alias dw = w1 - w2
         var err = k @ dw * self.dt
+
         if err.max_value() < self.tol:
             self.state += k @ w1 * self.dt
             self.t += self.dt
+
+            obs.log_state[n](self.t, self.state)
+
         var s = (self.tol / err.max_value() / 2) ** (1 / p)
         self.dt *= max(min(s, 4), 1 / 4)
 
 
-""" 
-from diffeq.desys import Lorenz
-from diffeq.rkstrategy import RK4, RK45, LStable
+from diffeq.desys_examples import Lorenz
+from diffeq.rk_strategies import RK4, RK45, LStable
 
 
 fn main() raises:
     var grad = Lorenz(10, 28, 8 / 3)
     var s0 = ColVec[3](2.0, 1.0, 1.0)
+    var obs = StateLogger[3](0, s0)
     var stepper = RKAdaptiveStepper[RK45](grad, s0, 0.01)
     for _ in range(30):
-        print("t =", stepper.t, end=": ")
-        for i in range(3):
-            print(stepper.state[i], end=" ")
-        print()
-        stepper.step()
-"""
+        stepper.step(obs)

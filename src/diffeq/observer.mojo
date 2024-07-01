@@ -11,7 +11,7 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from diffeq.diffeq_traits import StepLogger
+from diffeq.traits import StepLogger
 
 from linalg.static_matrix import (
     StaticMat as Mat,
@@ -20,11 +20,11 @@ from linalg.static_matrix import (
 )
 
 
-struct NullLogger(StepLogger):
+struct NullLogger[m: Int](StepLogger):
     fn __init__(inout self):
         pass
 
-    fn log[n: Int](inout self, t: Float64, s: ColVec[n]) raises:
+    fn log_state[n: Int](inout self, t: Float64, s: ColVec[n]):
         pass
 
 
@@ -36,10 +36,13 @@ struct StateLogger[m: Int](StepLogger):
         self.t = List[Float64]()
         self.state = List[ColVec[m]]()
 
-    fn log[n: Int](inout self, t: Float64, s: ColVec[n]) raises:
+    fn __init__(inout self, t0: Float64, s0: ColVec[m]):
+        self.t = List[Float64]()
+        self.state = List[ColVec[m]]()
+        self.t.append(t0)
+        self.state.append(s0)
+
+    fn log_state[n: Int](inout self, t: Float64, s: ColVec[n]):
         constrained[m == n, "Invalid state size"]()
         self.t.append(t)
-        var ss = ColVec[m]()  # No parameterized traits yet :-(
-        for i in range(len(s)):
-            ss[i] = s[i]
-        self.state.append(ss)
+        self.state.append(rebind[ColVec[m]](s))

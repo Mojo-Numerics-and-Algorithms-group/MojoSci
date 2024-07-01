@@ -11,7 +11,7 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from diffeq.diffeq_traits import DESys
+from diffeq.traits import DESys
 
 from linalg.static_matrix import (
     StaticMat as Mat,
