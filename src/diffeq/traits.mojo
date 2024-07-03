@@ -18,6 +18,7 @@ from linalg.static_matrix import (
 )
 
 
+# TODO: Make everything generic over the state type
 trait StepLogger:
     fn __init__(inout self):
         pass
@@ -40,7 +41,16 @@ trait DESys(Copyable):
 
 
 trait StateStepper:
-    fn step(inout self):
+    fn step(inout self, ntimes: Int = 1):
+        pass
+
+    fn step[S: StepLogger](inout self, inout obs: S, ntimes: Int = 1):
+        pass
+
+    fn step_until(inout self, tstop: Float64):
+        pass
+
+    fn step_until[S: StepLogger](inout self, inout obs: S, tstop: Float64):
         pass
 
 

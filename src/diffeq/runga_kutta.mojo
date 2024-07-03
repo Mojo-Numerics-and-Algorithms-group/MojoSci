@@ -50,7 +50,32 @@ struct RKFixedStepper[Strategy: ExplicitRK, Sys: DESys, n: Int](StateStepper):
         self.dt = dt
         self.t = t0
 
-    fn step(inout self):
+    fn step(inout self, ntimes: Int = 1):
+        for _ in range(ntimes):
+            self._step()
+
+    fn step[S: StepLogger](inout self, inout obs: S, ntimes: Int = 1):
+        for _ in range(ntimes):
+            self._step()
+            obs.log_state(self.t, self.state)
+
+    fn step_until(inout self, tstop: Float64):
+        while self.t + self.dt < tstop:
+            self._step()
+        if self.t < tstop:
+            self.dt = tstop - self.t
+            self._step()
+
+    fn step_until[S: StepLogger](inout self, inout obs: S, tstop: Float64):
+        while self.t + self.dt < tstop:
+            self._step()
+            obs.log_state(self.t, self.state)
+        if self.t < tstop:
+            self.dt = tstop - self.t
+            self._step()
+            obs.log_state(self.t, self.state)
+
+    fn _step(inout self):
         alias m = Strategy.stages()
 
         var k = Mat[n, m].zeros()
@@ -95,11 +120,34 @@ struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
         self.dt = dt
         self.t = t0
 
-    fn step(inout self):
-        var obs = NullLogger[n]()
-        self.step(obs)
+    fn step(inout self, ntimes: Int = 1):
+        for _ in range(ntimes):
+            self._step()
 
-    fn step[S: StepLogger](inout self, inout obs: S):
+    fn step[S: StepLogger](inout self, inout obs: S, ntimes: Int = 1):
+        for _ in range(ntimes):
+            self._step()
+            obs.log_state(self.t, self.state)
+
+    # TODO: Handle stepping past tstop
+    fn step_until(inout self, tstop: Float64):
+        while self.t + self.dt < tstop:
+            self._step()
+        if self.t < tstop:
+            self.dt = tstop - self.t
+            self._step()
+
+    # TODO: Handle stepping past tstop
+    fn step_until[S: StepLogger](inout self, inout obs: S, tstop: Float64):
+        while self.t + self.dt < tstop:
+            self._step()
+            obs.log_state(self.t, self.state)
+        if self.t < tstop:
+            self.dt = tstop - self.t
+            self._step()
+            obs.log_state(self.t, self.state)
+
+    fn _step(inout self):
         alias p = Strategy.order2()
         alias w1 = Strategy.weights[m]()
         alias w2 = Strategy.weights2[m]()
@@ -122,8 +170,6 @@ struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
             self.state += k @ w1 * self.dt
             self.t += self.dt
 
-            obs.log_state[n](self.t, self.state)
-
         var s = (self.tol / err.max_value() / 2) ** (1 / p)
         self.dt *= max(min(s, 4), 1 / 4)
 
@@ -133,9 +179,8 @@ from diffeq.rk_strategies import RK4, RK45, LStable
 
 
 fn main() raises:
-    var grad = Lorenz(10, 28, 8 / 3)
-    var s0 = ColVec[3](2.0, 1.0, 1.0)
-    var obs = StateLogger[3](0, s0)
-    var stepper = RKAdaptiveStepper[RK45](grad, s0, 0.01)
-    for _ in range(30):
-        stepper.step(obs)
+    # var grad = Lorenz(10, 28, 8 / 3)
+    # var s0 = ColVec[3](2.0, 1.0, 1.0)
+    # var obs = StateLogger(0, s0)
+    # var stepper = RKAdaptiveStepper[RK45](grad, s0, 0.01)
+    # stepper.step()
