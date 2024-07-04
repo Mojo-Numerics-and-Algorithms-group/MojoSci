@@ -113,9 +113,8 @@ struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
         self.dt *= max(min(s, 4), 1 / 4)
 
 
-""" 
-from diffeq.desys import Lorenz
-from diffeq.rkstrategy import RK4, RK45, LStable
+""" from diffeq.desys_examples import Lorenz
+from diffeq.rk_strategies import RK4, RK45, LStable
 
 
 fn main() raises:
@@ -127,5 +126,4 @@ fn main() raises:
         for i in range(3):
             print(stepper.state[i], end=" ")
         print()
-        stepper.step()
-"""
+        stepper.step() """
