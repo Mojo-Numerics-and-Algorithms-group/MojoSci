@@ -179,8 +179,8 @@ from diffeq.rk_strategies import RK4, RK45, LStable
 
 
 fn main() raises:
-    # var grad = Lorenz(10, 28, 8 / 3)
-    # var s0 = ColVec[3](2.0, 1.0, 1.0)
-    # var obs = StateLogger(0, s0)
-    # var stepper = RKAdaptiveStepper[RK45](grad, s0, 0.01)
-    # stepper.step()
+    var grad = Lorenz(10, 28, 8 / 3)
+    var s0 = ColVec[3](2.0, 1.0, 1.0)
+    var obs = StateLogger(0, s0)
+    var stepper = RKAdaptiveStepper[RK45](grad, s0, 0.01)
+    stepper.step()
