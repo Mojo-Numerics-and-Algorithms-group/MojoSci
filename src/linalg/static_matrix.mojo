@@ -276,6 +276,15 @@ struct StaticMat[rows: Int, cols: Int](Sized):
         return res
 
     @staticmethod
+    fn iota() -> Self:
+        """Fill matrix with sequence from 0 to number of elements."""
+        var res = Self()
+        @parameter
+        for i in range(res.storage_size):
+            res.elements[i] = i
+        return res
+
+    @staticmethod
     fn zeros() -> Self:
         """Create zeros matrix of matching dimensions."""
         return Self(0)
@@ -581,6 +590,29 @@ struct StaticMat[rows: Int, cols: Int](Sized):
                 var tmp = self.get[row, col]()
                 self.set[row, col](self.get[col, row]())
                 self.set[col, row](tmp)
+
+    @always_inline
+    fn inverse(self) -> Self:
+        constrained[rows == cols, "Matrix must be square"]()
+
+        var I = Self.diag()
+        var P = StaticRowVec[cols].iota()
+
+        @parameter
+        for k in range(cols):
+            var c = 0
+            var max = abs(self.get[k, 0]())
+            @parameter
+            for j in range(k, cols):
+                if abs(self.get[k, j]()) > max:
+                    max = abs(self.get[k, j]())
+                    c = j
+            I.swap_cols(k, c)
+            P.swap_cols(k, c)
+
+
+
+        return self
 
     @always_inline
     fn PLU_decompose(
