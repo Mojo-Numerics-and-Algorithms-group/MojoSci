@@ -165,8 +165,7 @@ struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
 
         @parameter
         if (fixed):
-            alias w = Strategy.weights[m]()
-            self.state += k @ w * self.dt
+            self.state += k @ w1 * self.dt
             self.t += self.dt
 
         else:
