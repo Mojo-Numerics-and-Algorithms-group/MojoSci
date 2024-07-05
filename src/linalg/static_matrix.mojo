@@ -593,22 +593,35 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
     @always_inline
     fn inverse(self) -> Self:
-        constrained[rows == cols, "Matrix must be square"]()
+        constrained[rows == cols, "Cannot invert a non-square matrix."]()
 
         var I = Self.diag()
-        var P = StaticRowVec[cols].iota()
+        var P = StaticTuple[Int, cols]()
+
+        @parameter
+        for i in range(cols):
+            P[i] = i
 
         @parameter
         for k in range(cols):
-            var c = 0
-            var max = abs(self.get[k, 0]())
+            var c = k
+            var max = abs(self.get[k, k]())
             @parameter
-            for j in range(k, cols):
+            for j in range(k + 1, cols):
                 if abs(self.get[k, j]()) > max:
                     max = abs(self.get[k, j]())
                     c = j
             I.swap_cols(k, c)
-            P.swap_cols(k, c)
+            var tmp = P[k]
+            P[k] = P[c]
+            P[c] = tmp
+
+            for i in range(k + 1, cols):
+                var f = self.elements[self.pos(k, P[i])] / self.elements[self.pos(k, P[k])]
+                for j in range(cols):
+                    I.elements[self.pos(j, P[i])] += f * I.elements[self.pos(j, P[k])]                
+
+
 
 
 
