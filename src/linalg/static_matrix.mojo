@@ -592,8 +592,11 @@ struct StaticMat[rows: Int, cols: Int](Sized):
                 self.set[col, row](tmp)
 
     @always_inline
-    fn inverse(self) -> Self:
+    fn inverse(self) raises -> Self:
         constrained[rows == cols, "Cannot invert a non-square matrix."]()
+
+        if isclose(self.determinant(), 0.0):
+            raise Error("Matrix is singular; cannot compute the inverse.")
 
         var I = Self.diag()
         var P = StaticTuple[Int, cols]()
@@ -691,6 +694,22 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
         return (P, L, U)
 
+    @always_inline
+    fn determinant(self) -> Float64:
+        """Computes the determinant of the input matrix using PLU decomposition."""
+        var PLU = self.PLU_decompose()
+
+        var det_P = 1.0
+        var det_U = 1.0
+        @parameter
+        for i in range(rows):
+            det_U *= PLU[2].get[i, i]()
+            if PLU[0].get[i, i]() != 1.0:
+                det_P *= -1
+
+        return det_P * det_U
+
+
 # ===----------------------------------------------------------------------=== #
 # Vector types
 # ===----------------------------------------------------------------------=== #
@@ -721,6 +740,7 @@ fn main() raises:
         0.0, 3.0, 0.0,
         0.0, 0.0, 4.0
     )
+    print("Determinant of D is", D.determinant())
     var D_inv = D.inverse()
     var expected_inv = StaticMat[3, 3](
         0.5, 0.0, 0.0,
@@ -737,6 +757,7 @@ fn main() raises:
         4.0, 5.0, 6.0,
         7.0, 8.0, 9.0
     )
+    print("Determinant of S is", S.determinant())
     var S_inv = S.inverse()
     print("Output of inverting singular matrix:")
     print_mat(S_inv)
@@ -746,6 +767,7 @@ fn main() raises:
         7.0, 6.0, 5.0,
         2.0, 1.0, 3.0
     )
+    print("Determinant of A is", A.determinant())
     var A_inv = A.inverse()
     var I = A @ A_inv
     var expected_I = StaticMat[3, 3](
