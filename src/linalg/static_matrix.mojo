@@ -340,7 +340,7 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
     @always_inline
     fn __ne__(self, other: Self) -> Bool:
-        return ~self.__eq__(other)
+        return not self.__eq__(other)
 
     # ===----------------------------------------------------------------------=== #
     # Elementwise operators
@@ -595,68 +595,61 @@ struct StaticMat[rows: Int, cols: Int](Sized):
     fn inverse(self) raises -> Self:
         constrained[rows == cols, "Cannot invert a non-square matrix."]()
 
-        if isclose(self.determinant(), 0.0):
+        if isclose(self.determinant(), 0):
             raise Error("Matrix is singular; cannot compute the inverse.")
 
         var I = Self.diag()
-        var P = StaticTuple[Int, cols]()
-
-        @parameter
-        for i in range(cols):
-            P[i] = i
+        var A = self
 
         @parameter
         for k in range(cols):
-            var c = k
-            var max = abs(self.get[k, k]())
+            var max_row = k
+            var max_value = abs(A.get[k, k]())
             @parameter
-            for j in range(k + 1, cols):
-                var this = abs(self.get[k, j]())
-                if  this > max:
-                    max = this
-                    c = j
-            if c != k:
-                I.swap_cols(k, c)
-                swap(P[k], P[c])
+            for i in range(k + 1, rows):
+                var this_value = abs(A.get[i, k]())
+                if this_value > max_value:
+                    max_value = this_value
+                    max_row = i
+
+            if max_row != k:
+                I.swap_rows(k, max_row)
+                A.swap_rows(k, max_row)
 
             @parameter
-            for i in range(k + 1, cols):
-                var f = self.elements[self.pos(k, P[i])] / self.elements[self.pos(k, P[k])]
-                @parameter
-                for j in range(cols):
-                    I.elements[self.pos(j, P[i])] -= f * I.elements[self.pos(j, P[k])]
+            for i in range(k + 1, rows):
+                if not isclose(A.get[k, k](), 0):
+                    var f = A.get[i, k]() / A.get[k, k]()
+                    A.set[i, k](0.0)
+                    @parameter
+                    for j in range(k + 1, cols):
+                        A.set[i, j](A.get[i, j]() - f * A.get[k, j]())
+                    @parameter
+                    for j in range(cols):
+                        I.set[i, j](I.get[i, j]() - f * I.get[k, j]())
 
         @parameter
         for k in reversed(range(cols)):
             @parameter
             for j in range(cols):
-                I.elements[I.pos(j, P[k])] /= self.elements[self.pos(k, P[k])]
+                I.set[k, j](I.get[k, j]() / A.get[k, k]())
             @parameter
             for i in reversed(range(k)):
                 @parameter
                 for j in range(cols):
-                    I.elements[I.pos(j, P[i])] -= self.elements[self.pos(i, P[k])] * I.elements[I.pos(j, P[k])]
-
-        @parameter
-        for i in range(cols):
-            while P[i] != i:
-                var j = P[i]
-                I.swap_cols(i, j)
-                swap(P[i], P[j])
+                    I.set[i, j](I.get[i, j]() - A.get[i, k]() * I.get[k, j]())
 
         return I
 
     @always_inline
-    fn PLU_decompose(
-        self,
-    ) -> (StaticMat[rows, rows], StaticMat[rows, rows], Self):
+    fn PLU_decompose(self) -> (StaticMat[rows, rows], StaticMat[rows, rows], Self):
         """Computes the PLU decomposition of the input matrix.
-        
+
         Returns (P, L, U) such that P @ A == L @ U where
         A in the (possibly non-square) input matrix."""
 
         var P = StaticMat[rows, rows].diag()
-        var L = P
+        var L = StaticMat[rows, rows].diag()
         var U = self
 
         # rows, cols are compile-time parameters (constants)
@@ -681,7 +674,7 @@ struct StaticMat[rows: Int, cols: Int](Sized):
 
             @parameter
             for i in range(k + 1, rows):
-                if ~isclose(U.get[k, k](), 0):
+                if not isclose(U.get[k, k](), 0):
                     # L[i, k] = U[i, k] / U[k, k]
                     L.set[i, k](U.get[i, k]() / U.get[k, k]())
 
@@ -695,19 +688,62 @@ struct StaticMat[rows: Int, cols: Int](Sized):
         return (P, L, U)
 
     @always_inline
+    fn PLU_decompose2(self) raises -> (StaticMat[rows, rows], StaticMat[rows, rows], Self):
+        """Computes the PLU decomposition of the input matrix.
+        
+        Returns (P, L, U) such that P @ A == L @ U where
+        A in the (possibly non-square) input matrix."""
+
+        var P = StaticMat[rows, rows].diag()
+        var L = StaticMat[rows, rows](0.0)
+        var U = self
+
+        # rows, cols are compile-time parameters (constants)
+        for k in range(min(rows, cols)):
+            var pivot_row = k
+            var max_value = abs(U[k, k])  # |U[k, k]|
+
+            for i in range(k + 1, rows):
+                if abs(U[i, k]) > max_value:
+                    max_value = abs(U[i, k])  # |U[i, k]|
+                    pivot_row = i
+
+            if pivot_row != k:
+                # Swap full rows
+                P.swap_rows(k, pivot_row)
+                U.swap_rows(k, pivot_row)
+                L.swap_rows(k, pivot_row)
+
+            for i in range(k + 1, rows):
+                if not isclose(U[k, k], 0):
+                    # L[i, k] = U[i, k] / U[k, k]
+                    L[i, k] = U[i, k] / U[k, k]
+
+                for j in range(k + 1, cols):
+                    # U[i, j] = U[i, j] - L[i, k] * U[k, j]
+                    U[i, j] = U[i, j] - L[i, k] * U[k, j]
+
+                U[i, k] = 0.0  # U[i, k] = 0
+
+        # Set the diagonal of L to 1
+        for i in range(rows):
+            L[i, i] = 1.0
+
+        return (P, L, U)
+
+    @always_inline
     fn determinant(self) -> Float64:
         """Computes the determinant of the input matrix using PLU decomposition."""
         var PLU = self.PLU_decompose()
 
-        var det_P = 1.0
-        var det_U = 1.0
+        var det = 1.0
         @parameter
         for i in range(rows):
-            det_U *= PLU[2].get[i, i]()
+            det *= PLU[2].get[i, i]()
             if PLU[0].get[i, i]() != 1.0:
-                det_P *= -1
+                det *= -1
 
-        return det_P * det_U
+        return det
 
 
 # ===----------------------------------------------------------------------=== #
@@ -725,69 +761,74 @@ fn print_mat[rows: Int, cols: Int](x: StaticMat[rows, cols]) raises:
     for row in range(rows):
         for col in range(cols):
             print(x[row, col], end = " ")
-        print(end = "\n")
+        print()
+
+""" fn main() raises:
+   var X8 = StaticMat[2, 2](4, 6, 3, 3)
+   print_mat(X8)
+   print()
+   var LU8 = X8.PLU_decompose2()
+   var Pgen = LU8[0]
+   var Pexp = StaticMat[2, 2].diag()
+   print_mat(Pgen)
+   print()
+   print_mat(Pexp)
+   print()
+   var Lgen = LU8[1]
+   var Lexp = StaticMat[2, 2](1, 1.5, 0, 1)
+   print_mat(Lgen)
+   print()
+   print_mat(Lexp)
+   print()
+   var Ugen = LU8[2]
+   var Uexp = StaticMat[2, 2](4, 0, 3, -1.5)
+   print_mat(Ugen)
+   print()
+   print_mat(Uexp)
+   print()
+ """
 
 fn main() raises:
-    var x = StaticMat[3, 3].diag()
-    var y = x.inverse()
-    if x != y:
-        print("Inverse of identity matrix faield")
-    else:
-        print("Inverse of identity matrix passed")
+    var X8 = StaticMat[2, 2](4, 6, 3, 3)  # Column-major order
+    print("Original matrix X8:")
+    print_mat(X8)
+    print()
 
-    var D = StaticMat[3, 3](
-        2.0, 0.0, 0.0,
-        0.0, 3.0, 0.0,
-        0.0, 0.0, 4.0
-    )
-    print("Determinant of D is", D.determinant())
-    var D_inv = D.inverse()
-    var expected_inv = StaticMat[3, 3](
-        0.5, 0.0, 0.0,
-        0.0, 1.0/3.0, 0.0,
-        0.0, 0.0, 0.25
-    )
-    if D_inv != expected_inv:
-        print("Inverse of diag matrix failed")
-    else:
-        print("Inverse of diag matrix passed")
+    var LU8 = X8.PLU_decompose2()
 
-    var S = StaticMat[3, 3](
-        1.0, 2.0, 3.0,
-        4.0, 5.0, 6.0,
-        7.0, 8.0, 9.0
-    )
-    print("Determinant of S is", S.determinant())
-    var S_inv = S.inverse()
-    print("Output of inverting singular matrix:")
-    print_mat(S_inv)
+    var Pgen = LU8[0]
+    var Pexp = StaticMat[2, 2].diag()  # Correct expected P matrix
+    print("Generated P matrix:")
+    print_mat(Pgen)
+    print()
+    print("Expected P matrix:")
+    print_mat(Pexp)
+    print()
 
-    var A = StaticMat[3, 3](
-        4.0, 3.0, 2.0,
-        7.0, 6.0, 5.0,
-        2.0, 1.0, 3.0
-    )
-    print("Determinant of A is", A.determinant())
-    var A_inv = A.inverse()
-    var I = A @ A_inv
-    var expected_I = StaticMat[3, 3](
-        1.0, 0.0, 0.0,
-        0.0, 1.0, 0.0,
-        0.0, 0.0, 1.0
-    )
-    if I != expected_I:
-        print("Inverse of random matrix failed")
-        print_mat(A)
-        print_mat(A_inv)
-        print_mat(I)
-    else:
-        print("Inverse of random matrix passed")
+    var Lgen = LU8[1]
+    var Lexp = StaticMat[2, 2](1, 0, 0.75, 1)  # Correct expected L matrix
+    print("Generated L matrix:")
+    print_mat(Lgen)
+    print()
+    print("Expected L matrix:")
+    print_mat(Lexp)
+    print()
 
-    
+    var Ugen = LU8[2]
+    var Uexp = StaticMat[2, 2](4, 3, 0, 0.75)  # Correct expected U matrix
+    print("Generated U matrix:")
+    print_mat(Ugen)
+    print()
+    print("Expected U matrix:")
+    print_mat(Uexp)
+    print()
 
-
-
-
-    
-
-    
+    # Verify the reconstruction PA = LU
+    var PA = Pgen @ X8
+    var LU = Lgen @ Ugen
+    print("PA matrix:")
+    print_mat(PA)
+    print()
+    print("LU matrix:")
+    print_mat(LU)
+    print()

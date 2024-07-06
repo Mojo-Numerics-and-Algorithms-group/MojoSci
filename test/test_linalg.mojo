@@ -139,3 +139,32 @@ def test_mat_lu_decomp():
     var X6 = StaticMat[5, 3](mkfloat)
     var LU6 = X6.PLU_decompose()
     assert_true(LU6[1] @ LU6[2] == LU6[0] @ X6)
+    var X7 = StaticMat[2, 2](mkfloat)
+    var LU7 = X7.PLU_decompose()
+    assert_true(LU7[1] @ LU7[2] == LU7[0] @ X7)
+    var X8 = StaticMat[2, 2](4, 6, 3, 3)
+    var LU8 = X8.PLU_decompose()
+    var Pgen = LU8[0]
+    var Pexp = StaticMat[2, 2].diag()
+    assert_true(Pgen == Pexp)
+    var Lgen = LU8[1]
+    var Lexp = StaticMat[2, 2](1, 1.5, 0, 1)
+    assert_true(Lgen == Lexp)
+    var Ugen = LU8[2]
+    var Uexp = StaticMat[2, 2](4, 0, 3, -1.5)
+    assert_true(Ugen == Uexp)
+
+
+def test_determinant():
+    var m1 = StaticMat[3, 3].diag()
+    assert_equal(m1.determinant(), 1.0)
+    var m2 = StaticMat[3, 3](2.0, 0.0, 0.0, 0.0, 3.0, 0.0, 0.0, 0.0, 4.0)
+    assert_equal(m2.determinant(), 24.0)
+    var m3 = StaticMat[3, 3](1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0)
+    assert_equal(m3.determinant(), 0.0)
+    var m4 = StaticMat[2, 2](1.0, 2.0, 3.0, 4.0)
+    assert_equal(m4.determinant(), -2.0)
+    var m5 = StaticMat[3, 3](6.0, 1.0, 1.0, 4.0, -2.0, 5.0, 2.0, 8.0, 7.0)
+    assert_equal(m5.determinant(), -306.0)
+    var m6 = StaticMat[3, 3](0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    assert_equal(m6.determinant(), 0.0)
