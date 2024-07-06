@@ -608,24 +608,40 @@ struct StaticMat[rows: Int, cols: Int](Sized):
             var max = abs(self.get[k, k]())
             @parameter
             for j in range(k + 1, cols):
-                if abs(self.get[k, j]()) > max:
-                    max = abs(self.get[k, j]())
+                var this = abs(self.get[k, j]())
+                if  this > max:
+                    max = this
                     c = j
-            I.swap_cols(k, c)
-            var tmp = P[k]
-            P[k] = P[c]
-            P[c] = tmp
+            if c != k:
+                I.swap_cols(k, c)
+                swap(P[k], P[c])
 
+            @parameter
             for i in range(k + 1, cols):
                 var f = self.elements[self.pos(k, P[i])] / self.elements[self.pos(k, P[k])]
+                @parameter
                 for j in range(cols):
-                    I.elements[self.pos(j, P[i])] += f * I.elements[self.pos(j, P[k])]                
+                    I.elements[self.pos(j, P[i])] -= f * I.elements[self.pos(j, P[k])]
 
+        @parameter
+        for k in reversed(range(cols)):
+            @parameter
+            for j in range(cols):
+                I.elements[I.pos(j, P[k])] /= self.elements[self.pos(k, P[k])]
+            @parameter
+            for i in reversed(range(k)):
+                @parameter
+                for j in range(cols):
+                    I.elements[I.pos(j, P[i])] -= self.elements[self.pos(i, P[k])] * I.elements[I.pos(j, P[k])]
 
+        @parameter
+        for i in range(cols):
+            while P[i] != i:
+                var j = P[i]
+                I.swap_cols(i, j)
+                swap(P[i], P[j])
 
-
-
-        return self
+        return I
 
     @always_inline
     fn PLU_decompose(
@@ -686,37 +702,70 @@ fn to_scalar[n: Int, m: Int](owned x: StaticMat[n, m]) -> Float64:
     constrained[n == 1 and m == 1, "Only 1x1 matrices can be converted to a scalar value."]()
     return x.get[0, 0]()
 
-# fn main():
-#     var x = StaticMat[3, 3](1)
-#     var y = x @ x.ones_col()
+fn print_mat[rows: Int, cols: Int](x: StaticMat[rows, cols]) raises:
+    for row in range(rows):
+        for col in range(cols):
+            print(x[row, col], end = " ")
+        print(end = "\n")
 
-# fn main() raises:
-#     var X6 = StaticMat[5, 3](1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
-#     var LU6 = X6.PLU_decompose()
-#     print(LU6[1] @ LU6[2] == LU6[0] @ X6)
-#     var P = LU6[0]
-#     var L = LU6[1]
-#     var U = LU6[2]
-#     for i in range(L.rows):
-#         for j in range(L.cols):
-#             print(L[i, j], end=" ")
-#         print("\n")
-#     for i in range(U.rows):
-#         for j in range(U.cols):
-#             print(U[i, j], end=" ")
-#         print("\n")
-#     for i in range(P.rows):
-#         for j in range(P.cols):
-#             print(P[i, j], end=" ")
-#         print("\n")
-#     var LU = L @ U
-#     for i in range(LU.rows):
-#         for j in range(LU.cols):
-#             print(LU[i, j], end=" ")
-#         print("\n")
-#     var PA = P @ X6
-#     for i in range(PA.rows):
-#         for j in range(PA.cols):
-#             print(PA[i, j], end=" ")
-#         print("\n")
-#     print(LU == PA)
+fn main() raises:
+    var x = StaticMat[3, 3].diag()
+    var y = x.inverse()
+    if x != y:
+        print("Inverse of identity matrix faield")
+    else:
+        print("Inverse of identity matrix passed")
+
+    var D = StaticMat[3, 3](
+        2.0, 0.0, 0.0,
+        0.0, 3.0, 0.0,
+        0.0, 0.0, 4.0
+    )
+    var D_inv = D.inverse()
+    var expected_inv = StaticMat[3, 3](
+        0.5, 0.0, 0.0,
+        0.0, 1.0/3.0, 0.0,
+        0.0, 0.0, 0.25
+    )
+    if D_inv != expected_inv:
+        print("Inverse of diag matrix failed")
+    else:
+        print("Inverse of diag matrix passed")
+
+    var S = StaticMat[3, 3](
+        1.0, 2.0, 3.0,
+        4.0, 5.0, 6.0,
+        7.0, 8.0, 9.0
+    )
+    var S_inv = S.inverse()
+    print("Output of inverting singular matrix:")
+    print_mat(S_inv)
+
+    var A = StaticMat[3, 3](
+        4.0, 3.0, 2.0,
+        7.0, 6.0, 5.0,
+        2.0, 1.0, 3.0
+    )
+    var A_inv = A.inverse()
+    var I = A @ A_inv
+    var expected_I = StaticMat[3, 3](
+        1.0, 0.0, 0.0,
+        0.0, 1.0, 0.0,
+        0.0, 0.0, 1.0
+    )
+    if I != expected_I:
+        print("Inverse of random matrix failed")
+        print_mat(A)
+        print_mat(A_inv)
+        print_mat(I)
+    else:
+        print("Inverse of random matrix passed")
+
+    
+
+
+
+
+    
+
+    
