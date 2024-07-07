@@ -652,25 +652,26 @@ struct StaticMat[rows: Int, cols: Int](Sized):
         var L = StaticMat[rows, rows].diag()
         var U = self
 
-        # rows, cols are compile-time parameters (constants)
         @parameter
-        for k in range(min(rows, cols)):
-            var pivot_row = k
-            var max_value = abs(U.get[k, k]())  # |U[k, k]|
+        for col in range(min(rows, cols)):
+            var pivot_row = col
+            var max_value = abs(U.get[row, col]())
 
             @parameter
-            for i in range(k + 1, rows):
-                if abs(U.get[i, k]()) > max_value:
-                    max_value = abs(U.get[i, k]())  # |U[i, k]|
-                    pivot_row = i
+            for row in range(col + 1, rows):
+                alias this_value = abs(U.get[row, col]())
+                if this_value > max_value:
+                    max_value = this_value  
+                    pivot_row = row
 
-            if pivot_row != k:
-                # Swap full rows
-                P.swap_rows(k, pivot_row)
-                # Swap rows with col in k to cols - 1
-                U.swap_rows[k, cols](k, pivot_row)
-                # Swap rows with col in 0 to k - 1
-                L.swap_rows[0, k](k, pivot_row)
+            if max_value != 0:
+                if pivot_row != col:
+                    # Swap full rows
+                    P.swap_rows(pivot_row, col)
+                    # Swap rows with col in k to cols - 1
+                    U.swap_rows[col, cols](pivot_row, col)
+                    # Swap rows with col in 0 to k - 1
+                    L.swap_rows[0, col](pivot_row, col)
 
             @parameter
             for i in range(k + 1, rows):
