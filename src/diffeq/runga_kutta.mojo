@@ -30,6 +30,7 @@ from linalg.static_matrix import (
 
 struct RKFixedStepper[Strategy: ExplicitRK, Sys: DESys, n: Int](StateStepper):
     """Stepper for explicit Runga-Kutta strategies."""
+
     alias StateType = ColVec[n]
 
     var state: Self.StateType
@@ -97,7 +98,8 @@ struct RKFixedStepper[Strategy: ExplicitRK, Sys: DESys, n: Int](StateStepper):
 struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
     StateStepper
 ):
-"""Stepper for embedded Runga-Kutta strategies."""
+    """Stepper for embedded Runga-Kutta strategies."""
+
     alias StateType = ColVec[n]
 
     var state: Self.StateType
@@ -136,7 +138,7 @@ struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
             self._step()
         if self.t < tstop:
             self.dt = tstop - self.t
-            self._step[fixed = True]()
+            self._step[fixed=True]()
 
     fn step_until[S: StepLogger](inout self, inout obs: S, tstop: Float64):
         while self.t + self.dt < tstop:
@@ -144,7 +146,7 @@ struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
             obs.record_state(self.t, self.state)
         if self.t < tstop:
             self.dt = tstop - self.t
-            self._step[fixed = True]()
+            self._step[fixed=True]()
             obs.record_state(self.t, self.state)
 
     fn _step[fixed: Bool = False](inout self):
@@ -164,7 +166,7 @@ struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
             k.set_col[i](self.sys.deriv(t, s))
 
         @parameter
-        if (fixed):
+        if fixed:
             self.state += k @ w1 * self.dt
             self.t += self.dt
 
