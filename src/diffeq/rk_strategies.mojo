@@ -11,7 +11,7 @@
 # limitations under the License.
 # ===----------------------------------------------------------------------=== #
 
-from diffeq.diffeq_traits import (
+from diffeq.traits import (
     ExplicitRK,
     EmbeddedRK,
     FSALEmbeddedRK,
