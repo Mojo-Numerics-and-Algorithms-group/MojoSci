@@ -182,9 +182,8 @@ struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
             self.dt *= max(min(s, 4), 1 / 4)
 
 
+"""
 from diffeq.desys_examples import Lorenz
-from diffeq.rk_strategies import RK4, RK45, LStable
-
 
 fn main() raises:
     var grad = Lorenz(10, 28, 8 / 3)
@@ -192,3 +191,6 @@ fn main() raises:
     var obs = StateLogger(0, s0)
     var stepper = RKAdaptiveStepper[RK45](grad, s0, 0.01)
     stepper.step()
+    
+ """
+
