@@ -3,6 +3,17 @@ from stochasticity.prng_traits import PRNGEngine
 
 
 @always_inline
+fn l32[n: Int = 1](x: SIMD[DType.uint64, n]) -> SIMD[DType.uint64, n]:
+    alias lb: SIMD[DType.uint64, n] = 0xFFFFFFFF
+    return x & lb
+
+
+@always_inline
+fn u32[n: Int = 1](x: SIMD[DType.uint64, n]) -> SIMD[DType.uint64, n]:
+    return x >> 32
+
+
+@always_inline
 fn philox432[
     n: Int = 1, rounds: Int = 10
 ](
@@ -10,19 +21,17 @@ fn philox432[
     cnt0: SIMD[DType.uint64, n],
     cnt1: SIMD[DType.uint64, n],
 ) -> (SIMD[DType.uint64, n], SIMD[DType.uint64, n]):
-    alias lb: SIMD[DType.uint64, n] = 0xFFFFFFFF
-    alias ub: SIMD[DType.uint64, n] = ~lb
     var c0 = cnt0
     var c1 = cnt1
 
     @parameter
     for _ in range(rounds):
-        var p0 = (key & lb) * (c0 & lb)
-        p0 |= ((c0 >> 32) + (p0 & lb)) << 32
-        var p1 = (key >> 32) * (c1 & lb)
-        p1 |= ((c1 >> 32) + (p1 & lb)) << 32
-        c0 = (p1 & ub) | ((p1 ^ (p1 >> 48)) & lb)
-        c1 = (p0 & ub) | ((p0 ^ (p0 >> 48)) & lb)
+        var p0 = l32(key) * l32(c0)
+        p0 |= (u32(c0) + l32(p0)) << 32
+        var p1 = u32(key) * l32(c1)
+        p1 |= (u32(c1) + l32(p1)) << 32
+        c0 = u32(p1) << 32 | l32(p1 ^ (p1 >> 48))
+        c1 = u32(p0) << 32 | l32(p0 ^ (p0 >> 48))
 
     return (c0, c1)
 
