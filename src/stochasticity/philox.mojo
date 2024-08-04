@@ -2,6 +2,31 @@ from time import now
 from stochasticity.prng_traits import PRNGEngine
 
 
+@always_inline
+fn philox432[
+    n: Int = 1, rounds: Int = 10
+](
+    key: SIMD[DType.uint64, n],
+    cnt0: SIMD[DType.uint64, n],
+    cnt1: SIMD[DType.uint64, n],
+) -> (SIMD[DType.uint64, n], SIMD[DType.uint64, n]):
+    alias lb: SIMD[DType.uint64, n] = 0xFFFFFFFF
+    alias ub: SIMD[DType.uint64, n] = ~lb
+    var c0 = cnt0
+    var c1 = cnt1
+
+    @parameter
+    for _ in range(rounds):
+        var p0 = (key & lb) * (c0 & lb)
+        p0 |= ((c0 >> 32) + (p0 & lb)) << 32
+        var p1 = (key >> 32) * (c1 & lb)
+        p1 |= ((c1 >> 32) + (p1 & lb)) << 32
+        c0 = (p1 & ub) | ((p1 ^ (p1 >> 48)) & lb)
+        c1 = (p0 & ub) | ((p0 ^ (p0 >> 48)) & lb)
+
+    return (c0, c1)
+
+
 @register_passable("trivial")
 struct Philox4x32(PRNGEngine):
     """Philox 32-bit pseudo-random generator."""
