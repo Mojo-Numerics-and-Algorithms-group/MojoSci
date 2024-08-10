@@ -182,15 +182,104 @@ struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
             self.dt *= max(min(s, 4), 1 / 4)
 
 
-"""
+struct RKFSALAdaptiveStepper[Strategy: FSALEmbeddedRK, Sys: DESys, n: Int](
+    StateStepper
+):
+    """Stepper for first-same-as-last embedded Runga-Kutta strategies."""
+
+    alias StateType = ColVec[n]
+    alias m = Strategy.stages()
+
+    var state: Self.StateType
+    var k = Mat[n, m].zeros()
+    var tol: Float64
+    var dt: Float64
+    var t: Float64
+    var sys: Sys
+
+    fn __init__(
+        inout self,
+        sys: Sys,
+        state: Self.StateType,
+        dt: Float64,
+        t0: Float64 = 0,
+        tol: Float64 = 1e-9,
+    ) raises:
+        if len(state) != Sys.ndim():
+            raise Error("Initial state has the wrong number of dimensions")
+        self.sys = sys
+        self.state = state
+        self.tol = tol
+        self.dt = dt
+        self.t = t0
+
+        k.set_col[0](sys.deriv(t0, state))
+
+    fn step(inout self, ntimes: Int = 1):
+        for _ in range(ntimes):
+            self._step()
+
+    fn step[S: StepLogger](inout self, inout obs: S, ntimes: Int = 1):
+        for _ in range(ntimes):
+            self._step()
+            obs.record_state(self.t, self.state)
+
+    fn step_until(inout self, tstop: Float64):
+        while self.t + self.dt < tstop:
+            self._step()
+        if self.t < tstop:
+            self.dt = tstop - self.t
+            self._step[fixed=True]()
+
+    fn step_until[S: StepLogger](inout self, inout obs: S, tstop: Float64):
+        while self.t + self.dt < tstop:
+            self._step()
+            obs.record_state(self.t, self.state)
+        if self.t < tstop:
+            self.dt = tstop - self.t
+            self._step[fixed=True]()
+            obs.record_state(self.t, self.state)
+
+    fn _step[fixed: Bool = False](inout self):
+        alias p = Strategy.order2()
+        alias w1 = Strategy.weights[m]()
+        alias w2 = Strategy.weights2[m]()
+        alias m = Strategy.stages()
+
+        var kt = self.t + Strategy.strides[m]() * self.dt
+
+        @parameter
+        for i in range(1, m):
+            var t = kt.get[i]()
+            alias coefs = Strategy.coefs[i, m]()
+            var s = self.state + k @ coefs * self.dt
+            k.set_col[i](self.sys.deriv(t, s))
+
+        @parameter
+        if fixed:
+            self.state += k @ w1 * self.dt
+            self.t += self.dt
+
+        else:
+            alias dw = w1 - w2
+            var err = k @ dw * self.dt
+
+            if err.max_value() < self.tol:
+                self.state += k @ w1 * self.dt
+                self.t += self.dt
+
+            var s = (self.tol / err.max_value() / 2) ** (1 / p)
+            self.dt *= max(min(s, 4), 1 / 4)
+
+            self.k.set_col[0](self.k.get_col[m - 1]())
+
+
 from diffeq.desys_examples import Lorenz
+
 
 fn main() raises:
     var grad = Lorenz(10, 28, 8 / 3)
     var s0 = ColVec[3](2.0, 1.0, 1.0)
     var obs = StateLogger(0, s0)
-    var stepper = RKAdaptiveStepper[RK45](grad, s0, 0.01)
+    var stepper = RKFSALAdaptiveStepper[RK45](grad, s0, 0.01)
     stepper.step()
-    
- """
-
