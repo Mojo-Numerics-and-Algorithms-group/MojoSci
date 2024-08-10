@@ -33,9 +33,7 @@ fn philox432[
     """
 
     @always_inline
-    fn do_round[
-        n: Int
-    ](
+    fn do_round(
         inout cnt0: SIMD[DType.uint64, n],
         inout cnt1: SIMD[DType.uint64, n],
         key: SIMD[DType.uint64, n],
@@ -47,9 +45,9 @@ fn philox432[
         cnt1 = (v1 << 32) | ((v1 ^ cnt1 ^ key) >> 32)
 
     @always_inline
-    fn update_key[
-        n: Int
-    ](inout key: SIMD[DType.uint64, n],):
+    fn update_key(
+        inout key: SIMD[DType.uint64, n],
+    ):
         var key0 = key & 0xFFFFFFFF
         var key1 = key >> 32
         key = ((key1 + 0xBB67AE85) << 32) | ((key0 + 0x9E3779B9) & 0xFFFFFFFF)
@@ -69,9 +67,6 @@ fn philox432[
 
 
 # def main():
-#     var np = Python.import_module("numpy")
-#     var sd = Python.import_module("sdifphilox")
-
 #     alias rounds = 10
 #     alias low_mask = 0xFFFFFFFF
 
@@ -88,6 +83,9 @@ fn philox432[
 #     var ms3: UInt32 = (ms_res[1] >> 32).cast[DType.uint32]()
 
 #     print(ms0, ms1, ms2, ms3)
+
+#    var np = Python.import_module("numpy")
+#    var sd = Python.import_module("sdifphilox")
 
 #     var counter = np.zeros((4, 1), dtype=np.uint32)
 #     counter[0] = cnt0 & low_mask
