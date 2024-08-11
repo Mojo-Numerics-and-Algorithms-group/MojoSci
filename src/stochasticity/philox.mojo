@@ -1,5 +1,6 @@
 from time import now
 from stochasticity.prng_traits import PRNGEngine
+from stochasticity.splitmix import SplitMix
 
 # Ported from https://git.unicorn.org.cn/sd/webui/-/blob/v1.6.0/modules/rng_philox.py
 # This should match pytorch, except no conversion to normal deviates
@@ -60,51 +61,104 @@ fn philox432[
     return (cnt0, cnt1)
 
 
-# from testing import assert_equal
-# from stochasticity.splitmix import SplitMix
+@register_passable("trivial")
+struct PhiloxVect[n: Int, rounds: Int = 10](PRNGEngine):
+    """Compute n parallel streams."""
 
-# from python import Python
+    alias StateType = SIMD[DType.uint64, n]
+    alias ValueType = Self.StateType
+    alias SeedType = UInt64
 
+    var seed: Self.SeedType
+    
+    var counter0: Self.StateType
+    var counter1: Self.StateType
+    var key: Self.StateType
 
-# def main():
-#     alias rounds = 10
-#     alias low_mask = 0xFFFFFFFF
+    @staticmethod
+    fn ndim() -> Int:
+        return n
 
-#     var sm = SplitMix(1234)
-#     var cnt0: UInt64 = sm.next()
-#     var cnt1: UInt64 = sm.next()
-#     var key: UInt64 = sm.next()
+    fn __init__(inout self):
+        """Seed with current time."""
+        self.counter0 = 0
+        self.counter1 = 0
+        self.key = 0
+        self.seed = now()
+        self.reset()
 
-#     var ms_res = philox432[rounds=rounds](cnt0, cnt1, key)
+    fn __init__(inout self, seed: Self.SeedType):
+        """Seed with provided value."""
+        self.counter0 = 0
+        self.counter1 = 0
+        self.key = 0
+        self.seed = seed
+        self.reset()
 
-#     var ms0: UInt32 = (ms_res[0] & 0xFFFFFFFF).cast[DType.uint32]()
-#     var ms1: UInt32 = (ms_res[0] >> 32).cast[DType.uint32]()
-#     var ms2: UInt32 = (ms_res[1] & 0xFFFFFFFF).cast[DType.uint32]()
-#     var ms3: UInt32 = (ms_res[1] >> 32).cast[DType.uint32]()
+    fn reset(inout self):
+         """Start the sequence over using the current seed value.
+         
+        After 1000 warmup steps, the SplitMix prng is used to set the
+        key of each parallel rng. Counters are started at zero."""
+        var seedr = SplitMix(self.seed, 1000)
+        @parameter      
+        for i in range(n):
+            self.key[i] = seedr.next()
+        self.counter0 = 0
+        self.counter1 = 0
+                
+    fn reseed(inout self, seed: Self.SeedType):
+        """Set a new seed and reset the generator."""
+        self.seed = seed
+        self.reset()
 
-#     print(ms0, ms1, ms2, ms3)
+    fn get_seed(self) -> Self.SeedType:
+        """Return the current seed value."""
+        return self.seed
 
-#    var np = Python.import_module("numpy")
-#    var sd = Python.import_module("sdifphilox")
+    @always_inline
+    fn step(inout self):
+        """Advance the generator by one step.
+        
+        The streams are advanced in parallel
+        using SIMD operations."""
+        @parameter
+        for i in range(n):
+            self.counter0[i] += 1
+            if self.counter0[i] == 0:
+                self.counter1[i] += 1
 
-#     var counter = np.zeros((4, 1), dtype=np.uint32)
-#     counter[0] = cnt0 & low_mask
-#     counter[1] = cnt0 >> 32
-#     counter[2] = cnt1 & low_mask
-#     counter[3] = cnt1 >> 32
+    @always_inline
+    fn next(inout self) -> Self.ValueType:
+        """Return the next value in the sequence.
+        
+        The nth stream value will be in result[n - 1]."""
+        var res = philox432[rounds=rounds](self.counter0, self.counter1, self.key)
+        self.step()
+        return res[0]
 
-#     var sd_key = np.zeros((2, 1), dtype=np.uint32)
-#     sd_key[0] = key & low_mask
-#     sd_key[1] = key >> 32
+    @always_inline
+    fn next_scalar(inout self) -> UInt64:
+        """Required for generics."""
+        return self.next()[0]
 
-#     var sd_res = sd.philox4_32(counter, sd_key, rounds=rounds)
+    @always_inline
+    fn __call__(inout self) -> Self.ValueType:
+        """Same as calling next()."""
+        return self.next()
 
-#     var sd0: UInt32 = sd_res[0]
-#     var sd1: UInt32 = sd_res[1]
-#     var sd2: UInt32 = sd_res[2]
-#     var sd3: UInt32 = sd_res[3]
+    fn jump(inout self):
+        """Incerment first counter."""
+        self.counter0 += 1
 
-#     assert_equal(sd0, ms0)
-#     assert_equal(sd1, ms1)
-#     assert_equal(sd2, ms2)
-#     assert_equal(sd3, ms3)
+    fn long_jump(inout self):
+        """Increment second counter."""
+        self.counter1 += 1
+
+alias Philox = PhiloxVect[n=1]
+
+fn main():
+    var rng = Philox()
+    for _ in range(10):
+        print(rng.next())
+
