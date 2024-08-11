@@ -1,3 +1,16 @@
+# ===----------------------------------------------------------------------=== #
+# Copyright (c) 2024, Timothy H. Keitt. All rights reserved.
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions:
+# https://llvm.org/LICENSE.txt
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+# ===----------------------------------------------------------------------=== #
+
 from time import now
 from stochasticity.prng_traits import PRNGEngine
 from stochasticity.splitmix import SplitMix
@@ -123,10 +136,9 @@ struct PhiloxVect[n: Int, rounds: Int = 10](PRNGEngine):
         The streams are advanced in parallel
         using SIMD operations."""
         @parameter
-        for i in range(n):
-            self.counter0[i] += 1
-            if self.counter0[i] == 0:
-                self.counter1[i] += 1
+        self.counter0 += 1
+        if any(self.counter0 == 0):
+            self.counter1 += 1
 
     @always_inline
     fn next(inout self) -> Self.ValueType:
@@ -156,9 +168,3 @@ struct PhiloxVect[n: Int, rounds: Int = 10](PRNGEngine):
         self.counter1 += 1
 
 alias Philox = PhiloxVect[n=1]
-
-fn main():
-    var rng = Philox()
-    for _ in range(10):
-        print(rng.next())
-
