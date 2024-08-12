@@ -18,15 +18,16 @@ from stochasticity.splitmix import SplitMix
 # Ported from https://git.unicorn.org.cn/sd/webui/-/blob/v1.6.0/modules/rng_philox.py
 # This should match pytorch, except no conversion to normal deviates
 
+alias SIMD64 = SIMD[DType.uint64]
 
 @always_inline
 fn philox432[
     n: Int = 1, rounds: Int = 10
 ](
-    owned cnt0: SIMD[DType.uint64, n],
-    owned cnt1: SIMD[DType.uint64, n],
-    owned key: SIMD[DType.uint64, n],
-) -> (SIMD[DType.uint64, n], SIMD[DType.uint64, n]):
+    owned cnt0: SIMD64[n],
+    owned cnt1: SIMD64[n],
+    owned key: SIMD64[n],
+) -> (SIMD64[n], SIMD64[n]):
     """Compute output of the Philox 4x32-bit generator.
 
     Arguments
@@ -48,23 +49,24 @@ fn philox432[
 
     @always_inline
     fn do_round(
-        inout cnt0: SIMD[DType.uint64, n],
-        inout cnt1: SIMD[DType.uint64, n],
-        key: SIMD[DType.uint64, n],
+        inout cnt0: SIMD64[n],
+        inout cnt1: SIMD64[n],
+        key: SIMD64[n],
     ):
-        var v1 = 0xD2511F53 * (cnt0 & 0xFFFFFFFF)
-        var v2 = 0xCD9E8D57 * (cnt1 & 0xFFFFFFFF)
+        var v0 = 0xD2511F53 * (cnt0 & 0xFFFFFFFF)
+        var v1 = 0xCD9E8D57 * (cnt1 & 0xFFFFFFFF)
         var key0 = key << 32
-        cnt0 = (v2 << 32) | ((v2 ^ cnt0 ^ key0) >> 32)
-        cnt1 = (v1 << 32) | ((v1 ^ cnt1 ^ key) >> 32)
+        cnt0 = (v1 << 32) | ((v1 ^ cnt0 ^ key0) >> 32)
+        cnt1 = (v0 << 32) | ((v0 ^ cnt1 ^ key) >> 32)
 
     @always_inline
     fn update_key(
-        inout key: SIMD[DType.uint64, n],
+        inout key: SIMD64[n],
     ):
-        var key0 = key & 0xFFFFFFFF
-        var key1 = key >> 32
-        key = ((key1 + 0xBB67AE85) << 32) | ((key0 + 0x9E3779B9) & 0xFFFFFFFF)
+        alias max32 = 2 ** 32
+        var key0 = ((key & 0xFFFFFFFF) + 0x9E3779B9) % max32
+        var key1 = ((key >> 32) + 0xBB67AE85) % max32
+        key = (key1 << 32) | (key0 & 0xFFFFFFFF)
 
     @parameter
     for _ in range(rounds):
@@ -73,12 +75,11 @@ fn philox432[
 
     return (cnt0, cnt1)
 
-
 @register_passable("trivial")
 struct PhiloxVect[n: Int, rounds: Int = 10](PRNGEngine):
     """Compute n parallel streams."""
 
-    alias StateType = SIMD[DType.uint64, n]
+    alias StateType = SIMD64[n]
     alias ValueType = Self.StateType
     alias SeedType = UInt64
 
@@ -168,3 +169,8 @@ struct PhiloxVect[n: Int, rounds: Int = 10](PRNGEngine):
         self.counter1 += 1
 
 alias Philox = PhiloxVect[n=1]
+
+# fn main():
+#     var rng = PhiloxVect[n = 1, rounds = 7]()
+#     rng.long_jump()
+#     print(rng.next())
