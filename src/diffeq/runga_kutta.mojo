@@ -182,6 +182,7 @@ struct RKAdaptiveStepper[Strategy: EmbeddedRK, Sys: DESys, n: Int](
             self.dt *= max(min(s, 4), 1 / 4)
 
 
+# Separate for now but can be merged with the above
 struct RKFSALAdaptiveStepper[Strategy: FSALEmbeddedRK, Sys: DESys, n: Int](
     StateStepper
 ):
@@ -217,35 +218,37 @@ struct RKFSALAdaptiveStepper[Strategy: FSALEmbeddedRK, Sys: DESys, n: Int](
 
     fn step(inout self, ntimes: Int = 1):
         for _ in range(ntimes):
-            self._step()
+            self._update_k()
+            self._step_adapt()
 
     fn step[S: StepLogger](inout self, inout obs: S, ntimes: Int = 1):
         for _ in range(ntimes):
-            self._step()
+            self._update_k()
+            self._step_adapt()
             obs.record_state(self.t, self.state)
 
     fn step_until(inout self, tstop: Float64):
-        while self.t + self.dt < tstop:
-            self._step()
+          while self.t + self.dt < tstop:
+            self._update_k()
+            self._step_adapt()
         if self.t < tstop:
             self.dt = tstop - self.t
-            self._step[fixed=True]()
+            self._update_k()
+            self._step_fixed()
 
     fn step_until[S: StepLogger](inout self, inout obs: S, tstop: Float64):
         while self.t + self.dt < tstop:
-            self._step()
+            self._update_k()
+            self._step_adapt()
             obs.record_state(self.t, self.state)
         if self.t < tstop:
             self.dt = tstop - self.t
-            self._step[fixed=True]()
+            self._update_k()
+            self._step_fixed()
             obs.record_state(self.t, self.state)
 
-    fn _step[fixed: Bool = False](inout self):
-        alias p = Strategy.order2()
-        alias w1 = Strategy.weights[m]()
-        alias w2 = Strategy.weights2[m]()
+    fn _update_k(inout self):
         alias m = Strategy.stages()
-
         var kt = self.t + Strategy.strides[m]() * self.dt
 
         @parameter
@@ -255,31 +258,35 @@ struct RKFSALAdaptiveStepper[Strategy: FSALEmbeddedRK, Sys: DESys, n: Int](
             var s = self.state + k @ coefs * self.dt
             k.set_col[i](self.sys.deriv(t, s))
 
-        @parameter
-        if fixed:
-            self.state += k @ w1 * self.dt
-            self.t += self.dt
+    fn _step_fixed(inout self):
+        alias m = Strategy.stages()
+        alias w1 = Strategy.weights[m]()
+        self.state += self.k @ w1 * self.dt
+        self.k.set_col[0](self.k.get_col[m - 1]())
+        self.t += self.dt
 
-        else:
-            alias dw = w1 - w2
-            var err = k @ dw * self.dt
+    fn _step_adapt(inout self):
+        alias m = Strategy.stages()
+        alias p = Strategy.order2()
+        alias w1 = Strategy.weights[m]()
+        alias w2 = Strategy.weights2[m]()
+        alias dw = w1 - w2
 
-            if err.max_value() < self.tol:
-                self.state += k @ w1 * self.dt
-                self.t += self.dt
+        var err = self.k @ dw * self.dt
 
-            var s = (self.tol / err.max_value() / 2) ** (1 / p)
-            self.dt *= max(min(s, 4), 1 / 4)
+        if err.max_value() < self.tol:
+            self._step_fixed()
 
-            self.k.set_col[0](self.k.get_col[m - 1]())
-
-
-from diffeq.desys_examples import Lorenz
+        var s = (self.tol / err.max_value() / 2) ** (1 / p)
+        self.dt *= max(min(s, 4), 1 / 4)
 
 
-fn main() raises:
-    var grad = Lorenz(10, 28, 8 / 3)
-    var s0 = ColVec[3](2.0, 1.0, 1.0)
-    var obs = StateLogger(0, s0)
-    var stepper = RKFSALAdaptiveStepper[RK45](grad, s0, 0.01)
-    stepper.step()
+# from diffeq.desys_examples import Lorenz
+
+
+# fn main() raises:
+#     var grad = Lorenz(10, 28, 8 / 3)
+#     var s0 = ColVec[3](2.0, 1.0, 1.0)
+#     var obs = StateLogger(0, s0)
+#     var stepper = RKFSALAdaptiveStepper[RK45](grad, s0, 0.01)
+#     stepper.step()
