@@ -2,6 +2,23 @@ from sys.ffi import DLHandle
 from os.path import isfile
 from os.env import getenv
 
+# enum CBLAS_ORDER {CblasRowMajor=101, CblasColMajor=102};
+alias CblasRowMajor = 101
+alias CblasColMajor = 102
+# enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113};
+alias CblasNoTrans = 111
+alias CblasTrans = 112
+alias CblasConjTrans = 113
+# enum CBLAS_UPLO {CblasUpper=121, CblasLower=122};
+alias CblasUpper = 121
+alias CblasLower = 122
+# enum CBLAS_DIAG {CblasNonUnit=131, CblasUnit=132};
+alias CblasNonUnit = 131
+alias CblasUnit = 132
+# enum CBLAS_SIDE {CblasLeft=141, CblasRight=142};
+alias CblasLeft = 141
+alias CblasRight = 142
+
 
 struct CBLAS:
     var handle: DLHandle
@@ -21,6 +38,8 @@ struct CBLAS:
         if not self.handle:
             raise Error("Path not recognized as a dynamic library")
 
+    # float  cblas_sdsdot(const int N, const float alpha, const float *X,
+    #                 const int incX, const float *Y, const int incY);
     fn sdsdot(
         self,
         n: Int32,
@@ -44,6 +63,8 @@ struct CBLAS:
         ]("cblas_sdsdot")
         return cblas_func(n, a, x, x_inc, y, y_inc)
 
+    # double cblas_dsdot(const int N, const float *X, const int incX, const float *Y,
+    #                    const int incY);
     fn dsdot(
         self,
         n: Int32,
@@ -67,6 +88,8 @@ struct CBLAS:
         ]("cblas_dsdot")
         return cblas_func(n, a, x, x_inc, y, y_inc)
 
+    # float  cblas_sdot(const int N, const float  *X, const int incX,
+    #                   const float  *Y, const int incY);
     fn sdot(
         self,
         n: Int32,
@@ -88,6 +111,8 @@ struct CBLAS:
         ]("cblas_sdot")
         return cblas_func(n, x, x_inc, y, y_inc)
 
+    # double cblas_ddot(const int N, const double *X, const int incX,
+    #                   const double *Y, const int incY);
     fn ddot(
         self,
         n: Int32,
