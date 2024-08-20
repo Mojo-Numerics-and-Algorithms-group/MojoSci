@@ -42,23 +42,23 @@ struct CBLAS:
     #                 const int incX, const float *Y, const int incY);
     fn sdsdot(
         self,
-        n: Int32,
+        n: Int,
         a: Float32,
         x: UnsafePointer[Float32],
-        x_inc: Int32,
+        x_inc: Int,
         y: UnsafePointer[Float32],
-        y_inc: Int32,
+        y_inc: Int,
     ) raises -> Float32:
         if not self.handle.check_symbol("cblas_sdsdot"):
             raise Error("Dynamic library does not contain cblas_sdsdot")
         var cblas_func = self.handle.get_function[
             fn (
-                Int32,
+                Int,
                 Float32,
                 UnsafePointer[Float32],
-                Int32,
+                Int,
                 UnsafePointer[Float32],
-                Int32,
+                Int,
             ) -> Float32
         ]("cblas_sdsdot")
         return cblas_func(n, a, x, x_inc, y, y_inc)
@@ -67,23 +67,23 @@ struct CBLAS:
     #                    const int incY);
     fn dsdot(
         self,
-        n: Int32,
+        n: Int,
         a: Float32,
         x: UnsafePointer[Float32],
-        x_inc: Int32,
+        x_inc: Int,
         y: UnsafePointer[Float32],
-        y_inc: Int32,
+        y_inc: Int,
     ) raises -> Float64:
         if not self.handle.check_symbol("cblas_dsdot"):
             raise Error("Dynamic library does not contain cblas_dsdot")
         var cblas_func = self.handle.get_function[
             fn (
-                Int32,
+                Int,
                 Float32,
                 UnsafePointer[Float32],
-                Int32,
+                Int,
                 UnsafePointer[Float32],
-                Int32,
+                Int,
             ) -> Float64
         ]("cblas_dsdot")
         return cblas_func(n, a, x, x_inc, y, y_inc)
@@ -92,21 +92,21 @@ struct CBLAS:
     #                   const float  *Y, const int incY);
     fn sdot(
         self,
-        n: Int32,
+        n: Int,
         x: UnsafePointer[Float32],
-        x_inc: Int32,
+        x_inc: Int,
         y: UnsafePointer[Float32],
-        y_inc: Int32,
+        y_inc: Int,
     ) raises -> Float32:
         if not self.handle.check_symbol("cblas_sdot"):
             raise Error("Dynamic library does not contain cblas_sdot")
         var cblas_func = self.handle.get_function[
             fn (
-                Int32,
+                Int,
                 UnsafePointer[Float32],
-                Int32,
+                Int,
                 UnsafePointer[Float32],
-                Int32,
+                Int,
             ) -> Float32
         ]("cblas_sdot")
         return cblas_func(n, x, x_inc, y, y_inc)
@@ -115,33 +115,33 @@ struct CBLAS:
     #                   const double *Y, const int incY);
     fn ddot(
         self,
-        n: Int32,
+        n: Int,
         x: UnsafePointer[Float64],
-        x_inc: Int32,
+        x_inc: Int,
         y: UnsafePointer[Float64],
-        y_inc: Int32,
+        y_inc: Int,
     ) raises -> Float64:
         if not self.handle.check_symbol("cblas_ddot"):
             raise Error("Dynamic library does not contain cblas_ddot")
         var cblas_func = self.handle.get_function[
             fn (
-                Int32,
+                Int,
                 UnsafePointer[Float64],
-                Int32,
+                Int,
                 UnsafePointer[Float64],
-                Int32,
+                Int,
             ) -> Float64
         ]("cblas_ddot")
         return cblas_func(n, x, x_inc, y, y_inc)
 
 
 def main():
-    var n: Int32 = 100
+    var n: Int = 100
     var a: Float64 = 1
     var x = UnsafePointer[Float64].alloc(n.value)
-    var x_inc: Int32 = 1
+    var x_inc: Int = 1
     var y = UnsafePointer[Float64].alloc(n.value)
-    var y_inc: Int32 = 1
+    var y_inc: Int = 1
 
     for i in range(n):
         x[i] = i
