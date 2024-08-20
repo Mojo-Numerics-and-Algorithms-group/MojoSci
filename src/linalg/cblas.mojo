@@ -1,9 +1,18 @@
 from sys.ffi import DLHandle
 from os.path import isfile
+from os.env import getenv
 
 
 struct CBLAS:
     var handle: DLHandle
+
+    fn __init__(inout self) raises:
+        var path = getenv("MOJOSCI_CBLAS_DYNLIB_PATH")
+        if not isfile(path):
+            raise Error("Provided path does not point to a file")
+        self.handle = DLHandle(path)
+        if not self.handle:
+            raise Error("Path not recognized as a dynamic library")
 
     fn __init__(inout self, path: String) raises:
         if not isfile(path):
