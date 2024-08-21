@@ -2,137 +2,131 @@ from sys.ffi import DLHandle
 from os.path import isfile
 from os.env import getenv
 
-# enum CBLAS_ORDER {CblasRowMajor=101, CblasColMajor=102};
-alias CblasRowMajor = 101
-alias CblasColMajor = 102
-# enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113};
-alias CblasNoTrans = 111
-alias CblasTrans = 112
-alias CblasConjTrans = 113
-# enum CBLAS_UPLO {CblasUpper=121, CblasLower=122};
-alias CblasUpper = 121
-alias CblasLower = 122
-# enum CBLAS_DIAG {CblasNonUnit=131, CblasUnit=132};
-alias CblasNonUnit = 131
-alias CblasUnit = 132
-# enum CBLAS_SIDE {CblasLeft=141, CblasRight=142};
-alias CblasLeft = 141
-alias CblasRight = 142
-
 
 struct CBLAS:
+    # enum CBLAS_ORDER {CblasRowMajor=101, CblasColMajor=102};
+    alias CblasRowMajor = 101
+    alias CblasColMajor = 102
+    # enum CBLAS_TRANSPOSE {CblasNoTrans=111, CblasTrans=112, CblasConjTrans=113};
+    alias CblasNoTrans = 111
+    alias CblasTrans = 112
+    alias CblasConjTrans = 113
+    # enum CBLAS_UPLO {CblasUpper=121, CblasLower=122};
+    alias CblasUpper = 121
+    alias CblasLower = 122
+    # enum CBLAS_DIAG {CblasNonUnit=131, CblasUnit=132};
+    alias CblasNonUnit = 131
+    alias CblasUnit = 132
+    # enum CBLAS_SIDE {CblasLeft=141, CblasRight=142};
+    alias CblasLeft = 141
+    alias CblasRight = 142
+
+    alias PF32 = UnsafePointer[Float32]
+    alias PF64 = UnsafePointer[Float64]
+    alias PC32 = UnsafePointer[(Float32, Float32)]
+    alias PC64 = UnsafePointer[(Float64, Float64)]
+
+    alias SdsdotType = fn (
+        Int, Float32, Self.PF32, Int, Self.PF32, Int
+    ) -> Float32
+
+    alias DsdotType = fn (
+        Int, Float32, Self.PF32, Int, Self.PF32, Int
+    ) -> Float64
+
+    alias SdotType = fn (Int, Self.PF32, Int, Self.PF32, Int) -> Float32
+
+    alias DdotType = fn (Int, Self.PF64, Int, Self.PF64, Int) -> Float64
+
+    alias CdotSubType = fn (
+        Int, Self.PC32, Int, Self.PC32, Int, Self.PC32
+    ) -> None
+
+    alias ZdotSubType = fn (
+        Int, Self.PC64, Int, Self.PC64, Int, Self.PC64
+    ) -> None
+
+    alias SReductType = fn (Int, Self.PF32, Int) -> Float32
+    alias DReductType = fn (Int, Self.PF64, Int) -> Float64
+    alias CReductType = fn (Int, Self.PC32, Int) -> Float32
+    alias ZReductType = fn (Int, Self.PC64, Int) -> Float64
+
     var handle: DLHandle
+    var sdsdot: Self.SdsdotType
+    var dsdot: Self.DsdotType
+    var sdot: Self.SdotType
+    var ddot: Self.DdotType
+    var cdotc_sub: Self.CdotSubType
+    var cdotu_sub: Self.CdotSubType
+    var zdotc_sub: Self.ZdotSubType
+    var zdotu_sub: Self.ZdotSubType
+    var snrm2: Self.SReductType
+    var sasum: Self.SReductType
+    var dnrm2: Self.DReductType
+    var dasum: Self.DReductType
+    var scnrm2: Self.CReductType
+    var scasum: Self.CReductType
+    var dznrm2: Self.ZReductType
+    var dzasum: Self.ZReductType
 
     fn __init__(inout self) raises:
         var path = getenv("MOJOSCI_CBLAS_DYNLIB_PATH")
-        if not isfile(path):
-            raise Error("Provided path does not point to a file")
-        self.handle = DLHandle(path)
-        if not self.handle:
-            raise Error("Path not recognized as a dynamic library")
+        self.__init__(path)
 
     fn __init__(inout self, path: String) raises:
         if not isfile(path):
-            raise Error("Provided path does not point to a file")
+            raise Error("Path does not point to a file")
         self.handle = DLHandle(path)
         if not self.handle:
-            raise Error("Path not recognized as a dynamic library")
-
-    # float  cblas_sdsdot(const int N, const float alpha, const float *X,
-    #                 const int incX, const float *Y, const int incY);
-    fn sdsdot(
-        self,
-        n: Int,
-        a: Float32,
-        x: UnsafePointer[Float32],
-        x_inc: Int,
-        y: UnsafePointer[Float32],
-        y_inc: Int,
-    ) raises -> Float32:
-        if not self.handle.check_symbol("cblas_sdsdot"):
-            raise Error("Dynamic library does not contain cblas_sdsdot")
-        var cblas_func = self.handle.get_function[
-            fn (
-                Int,
-                Float32,
-                UnsafePointer[Float32],
-                Int,
-                UnsafePointer[Float32],
-                Int,
-            ) -> Float32
-        ]("cblas_sdsdot")
-        return cblas_func(n, a, x, x_inc, y, y_inc)
-
-    # double cblas_dsdot(const int N, const float *X, const int incX, const float *Y,
-    #                    const int incY);
-    fn dsdot(
-        self,
-        n: Int,
-        a: Float32,
-        x: UnsafePointer[Float32],
-        x_inc: Int,
-        y: UnsafePointer[Float32],
-        y_inc: Int,
-    ) raises -> Float64:
-        if not self.handle.check_symbol("cblas_dsdot"):
-            raise Error("Dynamic library does not contain cblas_dsdot")
-        var cblas_func = self.handle.get_function[
-            fn (
-                Int,
-                Float32,
-                UnsafePointer[Float32],
-                Int,
-                UnsafePointer[Float32],
-                Int,
-            ) -> Float64
-        ]("cblas_dsdot")
-        return cblas_func(n, a, x, x_inc, y, y_inc)
-
-    # float  cblas_sdot(const int N, const float  *X, const int incX,
-    #                   const float  *Y, const int incY);
-    fn sdot(
-        self,
-        n: Int,
-        x: UnsafePointer[Float32],
-        x_inc: Int,
-        y: UnsafePointer[Float32],
-        y_inc: Int,
-    ) raises -> Float32:
-        if not self.handle.check_symbol("cblas_sdot"):
-            raise Error("Dynamic library does not contain cblas_sdot")
-        var cblas_func = self.handle.get_function[
-            fn (
-                Int,
-                UnsafePointer[Float32],
-                Int,
-                UnsafePointer[Float32],
-                Int,
-            ) -> Float32
-        ]("cblas_sdot")
-        return cblas_func(n, x, x_inc, y, y_inc)
-
-    # double cblas_ddot(const int N, const double *X, const int incX,
-    #                   const double *Y, const int incY);
-    fn ddot(
-        self,
-        n: Int,
-        x: UnsafePointer[Float64],
-        x_inc: Int,
-        y: UnsafePointer[Float64],
-        y_inc: Int,
-    ) raises -> Float64:
-        if not self.handle.check_symbol("cblas_ddot"):
-            raise Error("Dynamic library does not contain cblas_ddot")
-        var cblas_func = self.handle.get_function[
-            fn (
-                Int,
-                UnsafePointer[Float64],
-                Int,
-                UnsafePointer[Float64],
-                Int,
-            ) -> Float64
-        ]("cblas_ddot")
-        return cblas_func(n, x, x_inc, y, y_inc)
+            raise Error("Cannot open dynamic library")
+        # float  cblas_sdsdot(const int N, const float alpha, const float *X,
+        #                     const int incX, const float *Y, const int incY);
+        self.sdsdot = self.handle.get_function[Self.SdsdotType]("cblas_sdsdot")
+        # double cblas_dsdot(const int N, const float *X, const int incX, const float *Y,
+        #                    const int incY);
+        self.dsdot = self.handle.get_function[Self.DsdotType]("cblas_dsdot")
+        # float  cblas_sdot(const int N, const float  *X, const int incX,
+        #                   const float  *Y, const int incY);
+        self.sdot = self.handle.get_function[Self.SdotType]("cblas_sdot")
+        # double cblas_ddot(const int N, const double *X, const int incX,
+        #                   const double *Y, const int incY);
+        self.ddot = self.handle.get_function[Self.DdotType]("cblas_ddot")
+        # void   cblas_cdotu_sub(const int N, const void *X, const int incX,
+        #                        const void *Y, const int incY, void *dotu);
+        self.cdotu_sub = self.handle.get_function[Self.CdotSubType](
+            "cblas_cdotu_sub"
+        )
+        # void   cblas_cdotc_sub(const int N, const void *X, const int incX,
+        #                        const void *Y, const int incY, void *dotc);
+        self.cdotc_sub = self.handle.get_function[Self.CdotSubType](
+            "cblas_cdotc_sub"
+        )
+        # void   cblas_zdotu_sub(const int N, const void *X, const int incX,
+        #                        const void *Y, const int incY, void *dotu);
+        self.zdotu_sub = self.handle.get_function[Self.ZdotSubType](
+            "cblas_zdotu_sub"
+        )
+        # void   cblas_zdotc_sub(const int N, const void *X, const int incX,
+        #                        const void *Y, const int incY, void *dotc);
+        self.zdotc_sub = self.handle.get_function[Self.ZdotSubType](
+            "cblas_zdotc_sub"
+        )
+        # float  cblas_snrm2(const int N, const float *X, const int incX);
+        self.snrm2 = self.handle.get_function[Self.SReductType]("cblas_snrm2")
+        # float  cblas_sasum(const int N, const float *X, const int incX);
+        self.sasum = self.handle.get_function[Self.SReductType]("cblas_sasum")
+        # double cblas_dnrm2(const int N, const double *X, const int incX);
+        self.dnrm2 = self.handle.get_function[Self.DReductType]("cblas_dnrm2")
+        # double cblas_dasum(const int N, const double *X, const int incX);
+        self.dasum = self.handle.get_function[Self.DReductType]("cblas_dasum")
+        # float  cblas_scnrm2(const int N, const void *X, const int incX);
+        self.scnrm2 = self.handle.get_function[Self.CReductType]("cblas_scnrm2")
+        # float  cblas_scasum(const int N, const void *X, const int incX);
+        self.scasum = self.handle.get_function[Self.CReductType]("cblas_scasum")
+        # double cblas_dznrm2(const int N, const void *X, const int incX);
+        self.dznrm2 = self.handle.get_function[Self.ZReductType]("cblas_dznrm2")
+        # double cblas_dzasum(const int N, const void *X, const int incX);
+        self.dzasum = self.handle.get_function[Self.ZReductType]("cblas_dzasum")
 
 
 def main():
