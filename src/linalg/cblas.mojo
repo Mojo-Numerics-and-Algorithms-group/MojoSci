@@ -26,18 +26,18 @@ struct CBLAS:
     alias PC32 = UnsafePointer[(Float32, Float32)]
     alias PC64 = UnsafePointer[(Float64, Float64)]
 
-    alias SdsdotType = fn (
+    alias SDsdotType = fn (
         Int, Float32, Self.PF32, Int, Self.PF32, Int
     ) -> Float32
-    alias DsdotType = fn (
+    alias DSdotType = fn (
         Int, Float32, Self.PF32, Int, Self.PF32, Int
     ) -> Float64
-    alias SdotType = fn (Int, Self.PF32, Int, Self.PF32, Int) -> Float32
-    alias DdotType = fn (Int, Self.PF64, Int, Self.PF64, Int) -> Float64
-    alias CdotSubType = fn (
+    alias SDotType = fn (Int, Self.PF32, Int, Self.PF32, Int) -> Float32
+    alias DDotType = fn (Int, Self.PF64, Int, Self.PF64, Int) -> Float64
+    alias CDotSubType = fn (
         Int, Self.PC32, Int, Self.PC32, Int, Self.PC32
     ) -> None
-    alias ZdotSubType = fn (
+    alias ZDotSubType = fn (
         Int, Self.PC64, Int, Self.PC64, Int, Self.PC64
     ) -> None
     alias SReductType = fn (Int, Self.PF32, Int) -> Float32
@@ -48,15 +48,17 @@ struct CBLAS:
     alias DWhichType = fn (Int, Self.PF64, Int) -> Int
     alias CWhichType = fn (Int, Self.PC32, Int) -> Int
     alias ZWhichType = fn (Int, Self.PC64, Int) -> Int
+    alias SSwapType = fn (Int, Self.PF32, Int, Self.PF32, Int) -> None
+    alias SAxpy = fn (Int, Float32, Self.PF32, Int, Self.PF32, Int) -> None
 
-    var sdsdot: Self.SdsdotType
-    var dsdot: Self.DsdotType
-    var sdot: Self.SdotType
-    var ddot: Self.DdotType
-    var cdotc_sub: Self.CdotSubType
-    var cdotu_sub: Self.CdotSubType
-    var zdotc_sub: Self.ZdotSubType
-    var zdotu_sub: Self.ZdotSubType
+    var sdsdot: Self.SDsdotType
+    var dsdot: Self.DSdotType
+    var sdot: Self.SDotType
+    var ddot: Self.DDotType
+    var cdotc_sub: Self.CDotSubType
+    var cdotu_sub: Self.CDotSubType
+    var zdotc_sub: Self.ZDotSubType
+    var zdotu_sub: Self.ZDotSubType
     var snrm2: Self.SReductType
     var sasum: Self.SReductType
     var dnrm2: Self.DReductType
@@ -69,8 +71,11 @@ struct CBLAS:
     var idamax: Self.DWhichType
     var icamax: Self.CWhichType
     var izamax: Self.ZWhichType
+    var sswap: Self.SSwapType
+    var scopy: Self.SSwapType
+    var saxpy: Self.SAxpy
 
-    var h: DLHandle
+    var h: DLHandle  # Lifetime???
 
     fn __init__(inout self) raises:
         var path = getenv("MOJOSCI_CBLAS_DYNLIB_PATH")
@@ -83,27 +88,27 @@ struct CBLAS:
         if not self.h:
             raise Error("Cannot open dynamic library")
         # float  cblas_sdsdot(const int N, const float alpha, const float *X, const int incX, const float *Y, const int incY);
-        self.sdsdot = self.h.get_function[Self.SdsdotType]("cblas_sdsdot")
+        self.sdsdot = self.h.get_function[Self.SDsdotType]("cblas_sdsdot")
         # double cblas_dsdot(const int N, const float *X, const int incX, const float *Y, const int incY);
-        self.dsdot = self.h.get_function[Self.DsdotType]("cblas_dsdot")
+        self.dsdot = self.h.get_function[Self.DSdotType]("cblas_dsdot")
         # float  cblas_sdot(const int N, const float  *X, const int incX, const float  *Y, const int incY);
-        self.sdot = self.h.get_function[Self.SdotType]("cblas_sdot")
+        self.sdot = self.h.get_function[Self.SDotType]("cblas_sdot")
         # double cblas_ddot(const int N, const double *X, const int incX, const double *Y, const int incY);
-        self.ddot = self.h.get_function[Self.DdotType]("cblas_ddot")
+        self.ddot = self.h.get_function[Self.DDotType]("cblas_ddot")
         # void   cblas_cdotu_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotu);
-        self.cdotu_sub = self.h.get_function[Self.CdotSubType](
+        self.cdotu_sub = self.h.get_function[Self.CDotSubType](
             "cblas_cdotu_sub"
         )
         # void   cblas_cdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotc);
-        self.cdotc_sub = self.h.get_function[Self.CdotSubType](
+        self.cdotc_sub = self.h.get_function[Self.CDotSubType](
             "cblas_cdotc_sub"
         )
         # void   cblas_zdotu_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotu);
-        self.zdotu_sub = self.h.get_function[Self.ZdotSubType](
+        self.zdotu_sub = self.h.get_function[Self.ZDotSubType](
             "cblas_zdotu_sub"
         )
         # void   cblas_zdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotc);
-        self.zdotc_sub = self.h.get_function[Self.ZdotSubType](
+        self.zdotc_sub = self.h.get_function[Self.ZDotSubType](
             "cblas_zdotc_sub"
         )
         # float  cblas_snrm2(const int N, const float *X, const int incX);
@@ -131,11 +136,11 @@ struct CBLAS:
         # CBLAS_INDEX cblas_izamax(const int N, const void   *X, const int incX);
         self.izamax = self.h.get_function[Self.ZWhichType]("cblas_izamax")
         # void cblas_sswap(const int N, float *X, const int incX, float *Y, const int incY);
-        self.sswap = self.h.get_function[Self.SSwapType]("cblas_izamax")
+        self.sswap = self.h.get_function[Self.SSwapType]("cblas_sswap")
         # void cblas_scopy(const int N, const float *X, const int incX, float *Y, const int incY);
-        self.scopy = self.h.get_function[Self.SSwapType]("cblas_izamax")
+        self.scopy = self.h.get_function[Self.SSwapType]("cblas_scopy")
         # void cblas_saxpy(const int N, const float alpha, const float *X, const int incX, float *Y, const int incY);
-        self.saxpy = self.h.get_function[Self.SAxpyType]("cblas_izamax")
+        self.saxpy = self.h.get_function[Self.SAxpy]("cblas_saxpy")
 
 
 def main():
