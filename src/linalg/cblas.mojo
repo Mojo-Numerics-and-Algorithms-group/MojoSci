@@ -49,7 +49,6 @@ struct CBLAS:
     alias CWhichType = fn (Int, Self.PC32, Int) -> Int
     alias ZWhichType = fn (Int, Self.PC64, Int) -> Int
 
-    var handle: DLHandle
     var sdsdot: Self.SdsdotType
     var dsdot: Self.DsdotType
     var sdot: Self.SdotType
@@ -78,10 +77,9 @@ struct CBLAS:
     fn __init__(inout self, path: String) raises:
         if not isfile(path):
             raise Error("Path does not point to a file")
-        self.handle = DLHandle(path)
-        if not self.handle:
+        var h = DLHandle(path)
+        if not h:
             raise Error("Cannot open dynamic library")
-        var h = self.handle
         # float  cblas_sdsdot(const int N, const float alpha, const float *X,
         #                     const int incX, const float *Y, const int incY);
         self.sdsdot = h.get_function[Self.SdsdotType]("cblas_sdsdot")
