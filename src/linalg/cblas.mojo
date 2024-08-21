@@ -70,6 +70,8 @@ struct CBLAS:
     var icamax: Self.CWhichType
     var izamax: Self.ZWhichType
 
+    var h: DLHandle
+
     fn __init__(inout self) raises:
         var path = getenv("MOJOSCI_CBLAS_DYNLIB_PATH")
         self.__init__(path)
@@ -77,57 +79,63 @@ struct CBLAS:
     fn __init__(inout self, path: String) raises:
         if not isfile(path):
             raise Error("Path does not point to a file")
-        var h = DLHandle(path)
-        if not h:
+        self.h = DLHandle(path)
+        if not self.h:
             raise Error("Cannot open dynamic library")
-        # float  cblas_sdsdot(const int N, const float alpha, const float *X,
-        #                     const int incX, const float *Y, const int incY);
-        self.sdsdot = h.get_function[Self.SdsdotType]("cblas_sdsdot")
-        # double cblas_dsdot(const int N, const float *X, const int incX, const float *Y,
-        #                    const int incY);
-        self.dsdot = h.get_function[Self.DsdotType]("cblas_dsdot")
-        # float  cblas_sdot(const int N, const float  *X, const int incX,
-        #                   const float  *Y, const int incY);
-        self.sdot = h.get_function[Self.SdotType]("cblas_sdot")
-        # double cblas_ddot(const int N, const double *X, const int incX,
-        #                   const double *Y, const int incY);
-        self.ddot = h.get_function[Self.DdotType]("cblas_ddot")
-        # void   cblas_cdotu_sub(const int N, const void *X, const int incX,
-        #                        const void *Y, const int incY, void *dotu);
-        self.cdotu_sub = h.get_function[Self.CdotSubType]("cblas_cdotu_sub")
-        # void   cblas_cdotc_sub(const int N, const void *X, const int incX,
-        #                        const void *Y, const int incY, void *dotc);
-        self.cdotc_sub = h.get_function[Self.CdotSubType]("cblas_cdotc_sub")
-        # void   cblas_zdotu_sub(const int N, const void *X, const int incX,
-        #                        const void *Y, const int incY, void *dotu);
-        self.zdotu_sub = h.get_function[Self.ZdotSubType]("cblas_zdotu_sub")
-        # void   cblas_zdotc_sub(const int N, const void *X, const int incX,
-        #                        const void *Y, const int incY, void *dotc);
-        self.zdotc_sub = h.get_function[Self.ZdotSubType]("cblas_zdotc_sub")
+        # float  cblas_sdsdot(const int N, const float alpha, const float *X, const int incX, const float *Y, const int incY);
+        self.sdsdot = self.h.get_function[Self.SdsdotType]("cblas_sdsdot")
+        # double cblas_dsdot(const int N, const float *X, const int incX, const float *Y, const int incY);
+        self.dsdot = self.h.get_function[Self.DsdotType]("cblas_dsdot")
+        # float  cblas_sdot(const int N, const float  *X, const int incX, const float  *Y, const int incY);
+        self.sdot = self.h.get_function[Self.SdotType]("cblas_sdot")
+        # double cblas_ddot(const int N, const double *X, const int incX, const double *Y, const int incY);
+        self.ddot = self.h.get_function[Self.DdotType]("cblas_ddot")
+        # void   cblas_cdotu_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotu);
+        self.cdotu_sub = self.h.get_function[Self.CdotSubType](
+            "cblas_cdotu_sub"
+        )
+        # void   cblas_cdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotc);
+        self.cdotc_sub = self.h.get_function[Self.CdotSubType](
+            "cblas_cdotc_sub"
+        )
+        # void   cblas_zdotu_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotu);
+        self.zdotu_sub = self.h.get_function[Self.ZdotSubType](
+            "cblas_zdotu_sub"
+        )
+        # void   cblas_zdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotc);
+        self.zdotc_sub = self.h.get_function[Self.ZdotSubType](
+            "cblas_zdotc_sub"
+        )
         # float  cblas_snrm2(const int N, const float *X, const int incX);
-        self.snrm2 = h.get_function[Self.SReductType]("cblas_snrm2")
+        self.snrm2 = self.h.get_function[Self.SReductType]("cblas_snrm2")
         # float  cblas_sasum(const int N, const float *X, const int incX);
-        self.sasum = h.get_function[Self.SReductType]("cblas_sasum")
+        self.sasum = self.h.get_function[Self.SReductType]("cblas_sasum")
         # double cblas_dnrm2(const int N, const double *X, const int incX);
-        self.dnrm2 = h.get_function[Self.DReductType]("cblas_dnrm2")
+        self.dnrm2 = self.h.get_function[Self.DReductType]("cblas_dnrm2")
         # double cblas_dasum(const int N, const double *X, const int incX);
-        self.dasum = h.get_function[Self.DReductType]("cblas_dasum")
+        self.dasum = self.h.get_function[Self.DReductType]("cblas_dasum")
         # float  cblas_scnrm2(const int N, const void *X, const int incX);
-        self.scnrm2 = h.get_function[Self.CReductType]("cblas_scnrm2")
+        self.scnrm2 = self.h.get_function[Self.CReductType]("cblas_scnrm2")
         # float  cblas_scasum(const int N, const void *X, const int incX);
-        self.scasum = h.get_function[Self.CReductType]("cblas_scasum")
+        self.scasum = self.h.get_function[Self.CReductType]("cblas_scasum")
         # double cblas_dznrm2(const int N, const void *X, const int incX);
-        self.dznrm2 = h.get_function[Self.ZReductType]("cblas_dznrm2")
+        self.dznrm2 = self.h.get_function[Self.ZReductType]("cblas_dznrm2")
         # double cblas_dzasum(const int N, const void *X, const int incX);
-        self.dzasum = h.get_function[Self.ZReductType]("cblas_dzasum")
+        self.dzasum = self.h.get_function[Self.ZReductType]("cblas_dzasum")
         # CBLAS_INDEX cblas_isamax(const int N, const float  *X, const int incX);
-        self.isamax = h.get_function[Self.SWhichType]("cblas_isamax")
+        self.isamax = self.h.get_function[Self.SWhichType]("cblas_isamax")
         # CBLAS_INDEX cblas_idamax(const int N, const double *X, const int incX);
-        self.idamax = h.get_function[Self.DWhichType]("cblas_idamax")
+        self.idamax = self.h.get_function[Self.DWhichType]("cblas_idamax")
         # CBLAS_INDEX cblas_icamax(const int N, const void   *X, const int incX);
-        self.icamax = h.get_function[Self.CWhichType]("cblas_icamax")
+        self.icamax = self.h.get_function[Self.CWhichType]("cblas_icamax")
         # CBLAS_INDEX cblas_izamax(const int N, const void   *X, const int incX);
-        self.izamax = h.get_function[Self.ZWhichType]("cblas_izamax")
+        self.izamax = self.h.get_function[Self.ZWhichType]("cblas_izamax")
+        # void cblas_sswap(const int N, float *X, const int incX, float *Y, const int incY);
+        self.sswap = self.h.get_function[Self.SSwapType]("cblas_izamax")
+        # void cblas_scopy(const int N, const float *X, const int incX, float *Y, const int incY);
+        self.scopy = self.h.get_function[Self.SSwapType]("cblas_izamax")
+        # void cblas_saxpy(const int N, const float alpha, const float *X, const int incX, float *Y, const int incY);
+        self.saxpy = self.h.get_function[Self.SAxpyType]("cblas_izamax")
 
 
 def main():
