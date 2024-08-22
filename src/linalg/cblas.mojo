@@ -2,6 +2,35 @@ from sys.ffi import DLHandle
 from os.path import isfile
 from os.env import getenv
 
+alias F32 = Float32
+alias F64 = Float64
+
+
+@value
+struct C32:
+    var real: F32
+    var imaginary: F32
+
+    fn __init__(inout self, r: F32, i: F32):
+        self.real = r
+        self.imaginary = i
+
+
+@value
+struct C64:
+    var real: F64
+    var imaginary: F64
+
+    fn __init__(inout self, r: F64, i: F64):
+        self.real = r
+        self.imaginary = i
+
+
+alias PF32 = UnsafePointer[F32]
+alias PF64 = UnsafePointer[F64]
+alias PC32 = UnsafePointer[C32]
+alias PC64 = UnsafePointer[C64]
+
 
 struct CBLAS:
     # enum CBLAS_ORDER {CblasRowMajor=101, CblasColMajor=102};
@@ -21,59 +50,76 @@ struct CBLAS:
     alias CblasLeft = 141
     alias CblasRight = 142
 
-    alias PF32 = UnsafePointer[Float32]
-    alias PF64 = UnsafePointer[Float64]
-    alias PC32 = UnsafePointer[(Float32, Float32)]
-    alias PC64 = UnsafePointer[(Float64, Float64)]
+    # float  cblas_sdsdot(const int N, const float alpha, const float *X, const int incX, const float *Y, const int incY);
+    alias SDSDotType = fn (Int, F32, PF32, Int, PF32, Int) -> F32
+    # double cblas_dsdot(const int N, const float *X, const int incX, const float *Y, const int incY);
+    alias DSDotType = fn (Int, F32, PF32, Int, PF32, Int) -> F64
+    # float  cblas_sdot(const int N, const float  *X, const int incX, const float  *Y, const int incY);
+    alias SDotType = fn (Int, PF32, Int, PF32, Int) -> F32
+    # double cblas_ddot(const int N, const double *X, const int incX, const double *Y, const int incY);
+    alias DDotType = fn (Int, PF64, Int, PF64, Int) -> F64
+    # void   cblas_cdotu_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotu);
+    alias CDotUSubType = fn (Int, PC32, Int, PC32, Int, PC32) -> None
+    # void   cblas_cdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotc);
+    alias CDotCSubType = fn (Int, PC32, Int, PC32, Int, PC32) -> None
+    # void   cblas_zdotu_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotu);
+    alias ZDotUSubType = fn (Int, PC64, Int, PC64, Int, PC64) -> None
+    # void   cblas_zdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotc);
+    alias ZDotCSubType = fn (Int, PC64, Int, PC64, Int, PC64) -> None
+    # float  cblas_snrm2(const int N, const float *X, const int incX);
+    alias SNrm2Type = fn (Int, PF32, Int) -> F32
+    # float  cblas_sasum(const int N, const float *X, const int incX);
+    alias SASumType = fn (Int, PF32, Int) -> F32
+    # double cblas_dnrm2(const int N, const double *X, const int incX);
+    alias DNrm2Type = fn (Int, PF64, Int) -> F64
+    # double cblas_dasum(const int N, const double *X, const int incX);
+    alias DASumType = fn (Int, PF64, Int) -> F64
+    # float  cblas_scnrm2(const int N, const void *X, const int incX);
+    alias SCNrm2Type = fn (Int, PC32, Int) -> F32
+    # float  cblas_scasum(const int N, const void *X, const int incX);
+    alias SCASumType = fn (Int, PC32, Int) -> F32
+    # double cblas_dznrm2(const int N, const void *X, const int incX);
+    alias DZNrm2Type = fn (Int, PC64, Int) -> F64
+    # double cblas_dzasum(const int N, const void *X, const int incX);
+    alias DZASumType = fn (Int, PC64, Int) -> F64
+    # CBLAS_INDEX cblas_isamax(const int N, const float  *X, const int incX);
+    alias ISAMaxType = fn (Int, PF32, Int) -> Int
+    # CBLAS_INDEX cblas_idamax(const int N, const double *X, const int incX);
+    alias IDAMaxType = fn (Int, PF64, Int) -> Int
+    # CBLAS_INDEX cblas_icamax(const int N, const void   *X, const int incX);
+    alias ICAMaxType = fn (Int, PC32, Int) -> Int
+    # CBLAS_INDEX cblas_izamax(const int N, const void   *X, const int incX);
+    alias IZAMaxType = fn (Int, PC64, Int) -> Int
+    # void cblas_sswap(const int N, float *X, const int incX, float *Y, const int incY);
+    alias SSwapType = fn (Int, PF32, Int, PF32, Int) -> None
+    # void cblas_scopy(const int N, const float *X, const int incX, float *Y, const int incY);
+    alias SCopyType = fn (Int, PF32, Int, PF32, Int) -> None
+    # void cblas_saxpy(const int N, const float alpha, const float *X, const int incX, float *Y, const int incY);
+    alias SAxpyType = fn (Int, F32, PF32, Int, PF32, Int) -> None
 
-    alias SDsdotType = fn (
-        Int, Float32, Self.PF32, Int, Self.PF32, Int
-    ) -> Float32
-    alias DSdotType = fn (
-        Int, Float32, Self.PF32, Int, Self.PF32, Int
-    ) -> Float64
-    alias SDotType = fn (Int, Self.PF32, Int, Self.PF32, Int) -> Float32
-    alias DDotType = fn (Int, Self.PF64, Int, Self.PF64, Int) -> Float64
-    alias CDotSubType = fn (
-        Int, Self.PC32, Int, Self.PC32, Int, Self.PC32
-    ) -> None
-    alias ZDotSubType = fn (
-        Int, Self.PC64, Int, Self.PC64, Int, Self.PC64
-    ) -> None
-    alias SReductType = fn (Int, Self.PF32, Int) -> Float32
-    alias DReductType = fn (Int, Self.PF64, Int) -> Float64
-    alias CReductType = fn (Int, Self.PC32, Int) -> Float32
-    alias ZReductType = fn (Int, Self.PC64, Int) -> Float64
-    alias SWhichType = fn (Int, Self.PF32, Int) -> Int
-    alias DWhichType = fn (Int, Self.PF64, Int) -> Int
-    alias CWhichType = fn (Int, Self.PC32, Int) -> Int
-    alias ZWhichType = fn (Int, Self.PC64, Int) -> Int
-    alias SSwapType = fn (Int, Self.PF32, Int, Self.PF32, Int) -> None
-    alias SAxpy = fn (Int, Float32, Self.PF32, Int, Self.PF32, Int) -> None
-
-    var sdsdot: Self.SDsdotType
-    var dsdot: Self.DSdotType
+    var sdsdot: Self.SDSDotType
+    var dsdot: Self.DSDotType
     var sdot: Self.SDotType
     var ddot: Self.DDotType
-    var cdotc_sub: Self.CDotSubType
-    var cdotu_sub: Self.CDotSubType
-    var zdotc_sub: Self.ZDotSubType
-    var zdotu_sub: Self.ZDotSubType
-    var snrm2: Self.SReductType
-    var sasum: Self.SReductType
-    var dnrm2: Self.DReductType
-    var dasum: Self.DReductType
-    var scnrm2: Self.CReductType
-    var scasum: Self.CReductType
-    var dznrm2: Self.ZReductType
-    var dzasum: Self.ZReductType
-    var isamax: Self.SWhichType
-    var idamax: Self.DWhichType
-    var icamax: Self.CWhichType
-    var izamax: Self.ZWhichType
+    var cdotu_sub: Self.CDotUSubType
+    var cdotc_sub: Self.CDotCSubType
+    var zdotu_sub: Self.ZDotUSubType
+    var zdotc_sub: Self.ZDotCSubType
+    var snrm2: Self.SNrm2Type
+    var sasum: Self.SASumType
+    var dnrm2: Self.DNrm2Type
+    var dasum: Self.DASumType
+    var scnrm2: Self.SCNrm2Type
+    var scasum: Self.SCASumType
+    var dznrm2: Self.DZNrm2Type
+    var dzasum: Self.DZASumType
+    var isamax: Self.ISAMaxType
+    var idamax: Self.IDAMaxType
+    var icamax: Self.ICAMaxType
+    var izamax: Self.IZAMaxType
     var sswap: Self.SSwapType
-    var scopy: Self.SSwapType
-    var saxpy: Self.SAxpy
+    var scopy: Self.SCopyType
+    var saxpy: Self.SAxpyType
 
     var h: DLHandle  # Lifetime???
 
@@ -87,76 +133,82 @@ struct CBLAS:
         self.h = DLHandle(path)
         if not self.h:
             raise Error("Cannot open dynamic library")
-        # float  cblas_sdsdot(const int N, const float alpha, const float *X, const int incX, const float *Y, const int incY);
-        self.sdsdot = self.h.get_function[Self.SDsdotType]("cblas_sdsdot")
-        # double cblas_dsdot(const int N, const float *X, const int incX, const float *Y, const int incY);
-        self.dsdot = self.h.get_function[Self.DSdotType]("cblas_dsdot")
-        # float  cblas_sdot(const int N, const float  *X, const int incX, const float  *Y, const int incY);
+
+        self.sdsdot = self.h.get_function[Self.SDSDotType]("cblas_sdsdot")
+        self.dsdot = self.h.get_function[Self.DSDotType]("cblas_dsdot")
         self.sdot = self.h.get_function[Self.SDotType]("cblas_sdot")
-        # double cblas_ddot(const int N, const double *X, const int incX, const double *Y, const int incY);
         self.ddot = self.h.get_function[Self.DDotType]("cblas_ddot")
-        # void   cblas_cdotu_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotu);
-        self.cdotu_sub = self.h.get_function[Self.CDotSubType](
+        self.cdotu_sub = self.h.get_function[Self.CDotUSubType](
             "cblas_cdotu_sub"
         )
-        # void   cblas_cdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotc);
-        self.cdotc_sub = self.h.get_function[Self.CDotSubType](
+        self.cdotc_sub = self.h.get_function[Self.CDotCSubType](
             "cblas_cdotc_sub"
         )
-        # void   cblas_zdotu_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotu);
-        self.zdotu_sub = self.h.get_function[Self.ZDotSubType](
+        self.zdotu_sub = self.h.get_function[Self.ZDotUSubType](
             "cblas_zdotu_sub"
         )
-        # void   cblas_zdotc_sub(const int N, const void *X, const int incX, const void *Y, const int incY, void *dotc);
-        self.zdotc_sub = self.h.get_function[Self.ZDotSubType](
+        self.zdotc_sub = self.h.get_function[Self.ZDotCSubType](
             "cblas_zdotc_sub"
         )
-        # float  cblas_snrm2(const int N, const float *X, const int incX);
-        self.snrm2 = self.h.get_function[Self.SReductType]("cblas_snrm2")
-        # float  cblas_sasum(const int N, const float *X, const int incX);
-        self.sasum = self.h.get_function[Self.SReductType]("cblas_sasum")
-        # double cblas_dnrm2(const int N, const double *X, const int incX);
-        self.dnrm2 = self.h.get_function[Self.DReductType]("cblas_dnrm2")
-        # double cblas_dasum(const int N, const double *X, const int incX);
-        self.dasum = self.h.get_function[Self.DReductType]("cblas_dasum")
-        # float  cblas_scnrm2(const int N, const void *X, const int incX);
-        self.scnrm2 = self.h.get_function[Self.CReductType]("cblas_scnrm2")
-        # float  cblas_scasum(const int N, const void *X, const int incX);
-        self.scasum = self.h.get_function[Self.CReductType]("cblas_scasum")
-        # double cblas_dznrm2(const int N, const void *X, const int incX);
-        self.dznrm2 = self.h.get_function[Self.ZReductType]("cblas_dznrm2")
-        # double cblas_dzasum(const int N, const void *X, const int incX);
-        self.dzasum = self.h.get_function[Self.ZReductType]("cblas_dzasum")
-        # CBLAS_INDEX cblas_isamax(const int N, const float  *X, const int incX);
-        self.isamax = self.h.get_function[Self.SWhichType]("cblas_isamax")
-        # CBLAS_INDEX cblas_idamax(const int N, const double *X, const int incX);
-        self.idamax = self.h.get_function[Self.DWhichType]("cblas_idamax")
-        # CBLAS_INDEX cblas_icamax(const int N, const void   *X, const int incX);
-        self.icamax = self.h.get_function[Self.CWhichType]("cblas_icamax")
-        # CBLAS_INDEX cblas_izamax(const int N, const void   *X, const int incX);
-        self.izamax = self.h.get_function[Self.ZWhichType]("cblas_izamax")
-        # void cblas_sswap(const int N, float *X, const int incX, float *Y, const int incY);
+        self.snrm2 = self.h.get_function[Self.SNrm2Type]("cblas_snrm2")
+        self.sasum = self.h.get_function[Self.SASumType]("cblas_sasum")
+        self.dnrm2 = self.h.get_function[Self.DNrm2Type]("cblas_dnrm2")
+        self.dasum = self.h.get_function[Self.DASumType]("cblas_dasum")
+        self.scnrm2 = self.h.get_function[Self.SCNrm2Type]("cblas_scnrm2")
+        self.scasum = self.h.get_function[Self.SCASumType]("cblas_scasum")
+        self.dznrm2 = self.h.get_function[Self.DZNrm2Type]("cblas_dznrm2")
+        self.dzasum = self.h.get_function[Self.DZASumType]("cblas_dzasum")
+        self.isamax = self.h.get_function[Self.ISAMaxType]("cblas_isamax")
+        self.idamax = self.h.get_function[Self.IDAMaxType]("cblas_idamax")
+        self.icamax = self.h.get_function[Self.ICAMaxType]("cblas_icamax")
+        self.izamax = self.h.get_function[Self.IZAMaxType]("cblas_izamax")
         self.sswap = self.h.get_function[Self.SSwapType]("cblas_sswap")
-        # void cblas_scopy(const int N, const float *X, const int incX, float *Y, const int incY);
-        self.scopy = self.h.get_function[Self.SSwapType]("cblas_scopy")
-        # void cblas_saxpy(const int N, const float alpha, const float *X, const int incX, float *Y, const int incY);
-        self.saxpy = self.h.get_function[Self.SAxpy]("cblas_saxpy")
+        self.scopy = self.h.get_function[Self.SCopyType]("cblas_scopy")
+        self.saxpy = self.h.get_function[Self.SAxpyType]("cblas_saxpy")
+
+
+from testing import *
 
 
 def main():
-    var n: Int = 100
-    var a: Float64 = 1
-    var x = UnsafePointer[Float64].alloc(n.value)
-    var x_inc: Int = 1
-    var y = UnsafePointer[Float64].alloc(n.value)
-    var y_inc: Int = 1
-
-    for i in range(n):
-        x[i] = i
-        y[i] = i
+    var n: Int = 3
 
     var cblas = CBLAS("/opt/homebrew/opt/openblas/lib/libopenblas.dylib")
 
-    var res = cblas.ddot(n, x, x_inc, y, y_inc)
+    var x32 = PF32.alloc(n.value)
+    var y32 = PF32.alloc(n.value)
 
-    print(res)
+    for i in range(n):
+        x32[i] = i
+        y32[i] = i
+
+    sdsdot_res = cblas.sdsdot(n, 2, x32, 1, y32, 1)
+    assert_equal(sdsdot_res, 7)
+
+    var dsdot_res = cblas.dsdot(n, 2, x32, 1, y32, 1)
+    assert_equal(dsdot_res, 5)
+
+    var sdot_res = cblas.sdot(n, x32, 1, y32, 1)
+    assert_equal(sdot_res, 5)
+
+    var x64 = PF64.alloc(n.value)
+    var y64 = PF64.alloc(n.value)
+
+    for i in range(n):
+        x64[i] = i
+        y64[i] = i
+
+    var ddot_res = cblas.ddot(n, x64, 1, y64, 1)
+    assert_equal(ddot_res, 5)
+
+    var cres32 = PC32.alloc(1)
+
+    var xc32 = PC32.alloc(n.value)
+    var yc32 = PC32.alloc(n.value)
+
+    for i in range(n):
+        xc32[i] = C32(i, i)
+        yc32[i] = C32(i, i)
+
+    cblas.cdotu_sub(n, xc32, 1, yc32, 1, cres32)
+    print(cres32[0].real, cres32[0].imaginary)
