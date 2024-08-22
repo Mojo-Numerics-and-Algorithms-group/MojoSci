@@ -174,9 +174,9 @@ struct CBLAS:
         self.sswap = self.h.get_function[Self.SSwapType]("cblas_sswap")
         self.scopy = self.h.get_function[Self.SCopyType]("cblas_scopy")
         self.saxpy = self.h.get_function[Self.SAxpyType]("cblas_saxpy")
-        self.dswap = self.h.get_function[Self.DSwapType]("cblas_sswap")
-        self.dcopy = self.h.get_function[Self.DCopyType]("cblas_scopy")
-        self.daxpy = self.h.get_function[Self.DAxpyType]("cblas_saxpy")
+        self.dswap = self.h.get_function[Self.DSwapType]("cblas_dswap")
+        self.dcopy = self.h.get_function[Self.DCopyType]("cblas_dcopy")
+        self.daxpy = self.h.get_function[Self.DAxpyType]("cblas_daxpy")
 
 
 from testing import *
