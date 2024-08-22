@@ -96,6 +96,12 @@ struct CBLAS:
     alias SCopyType = fn (Int, PF32, Int, PF32, Int) -> None
     # void cblas_saxpy(const int N, const float alpha, const float *X, const int incX, float *Y, const int incY);
     alias SAxpyType = fn (Int, F32, PF32, Int, PF32, Int) -> None
+    # void cblas_dswap(const int N, double *X, const int incX, double *Y, const int incY);
+    alias DSwapType = fn (Int, PF64, Int, PF64, Int) -> None
+    # void cblas_dcopy(const int N, const double *X, const int incX, double *Y, const int incY);
+    alias DCopyType = fn (Int, PF64, Int, PF64, Int) -> None
+    # void cblas_daxpy(const int N, const double alpha, const double *X, const int incX, double *Y, const int incY);
+    alias DAxpyType = fn (Int, F64, PF64, Int, PF64, Int) -> None
 
     var sdsdot: Self.SDSDotType
     var dsdot: Self.DSDotType
@@ -120,8 +126,11 @@ struct CBLAS:
     var sswap: Self.SSwapType
     var scopy: Self.SCopyType
     var saxpy: Self.SAxpyType
+    var dswap: Self.DSwapType
+    var dcopy: Self.DCopyType
+    var daxpy: Self.DAxpyType
 
-    var h: DLHandle  # Lifetime???
+    var h: DLHandle
 
     fn __init__(inout self) raises:
         var path = getenv("MOJOSCI_CBLAS_DYNLIB_PATH")
@@ -165,6 +174,9 @@ struct CBLAS:
         self.sswap = self.h.get_function[Self.SSwapType]("cblas_sswap")
         self.scopy = self.h.get_function[Self.SCopyType]("cblas_scopy")
         self.saxpy = self.h.get_function[Self.SAxpyType]("cblas_saxpy")
+        self.dswap = self.h.get_function[Self.DSwapType]("cblas_sswap")
+        self.dcopy = self.h.get_function[Self.DCopyType]("cblas_scopy")
+        self.daxpy = self.h.get_function[Self.DAxpyType]("cblas_saxpy")
 
 
 from testing import *
@@ -212,3 +224,67 @@ def main():
 
     cblas.cdotu_sub(n, xc32, 1, yc32, 1, cres32)
     print(cres32[0].real, cres32[0].imaginary)
+
+    cblas.cdotc_sub(n, xc32, 1, yc32, 1, cres32)
+    print(cres32[0].real, cres32[0].imaginary)
+
+    var cres64 = PC64.alloc(1)
+
+    var xc64 = PC64.alloc(n.value)
+    var yc64 = PC64.alloc(n.value)
+
+    for i in range(n):
+        xc64[i] = C64(i, i)
+        yc64[i] = C64(i, i)
+
+    cblas.zdotu_sub(n, xc64, 1, yc64, 1, cres64)
+    print(cres64[0].real, cres64[0].imaginary)
+
+    cblas.zdotc_sub(n, xc64, 1, yc64, 1, cres64)
+    print(cres64[0].real, cres64[0].imaginary)
+
+    var snrm2_res = cblas.snrm2(n, x32, 1)
+    print(snrm2_res)
+
+    var sasum_res = cblas.sasum(n, y32, 1)
+    print(sasum_res)
+
+    var dnrm2_res = cblas.dnrm2(n, x64, 1)
+    print(dnrm2_res)
+
+    var dasum_res = cblas.dasum(n, y64, 1)
+    print(dasum_res)
+
+    var scnrm2_res = cblas.scnrm2(n, xc32, 1)
+    print(scnrm2_res)
+
+    var scasum_res = cblas.scasum(n, yc32, 1)
+    print(scasum_res)
+
+    var dznrm2_res = cblas.dznrm2(n, xc64, 1)
+    print(dznrm2_res)
+
+    var dzasum_res = cblas.dzasum(n, yc64, 1)
+    print(dzasum_res)
+
+    var isamax_res = cblas.isamax(n, x32, 1)
+    print(isamax_res)
+
+    var idamax_res = cblas.idamax(n, y64, 1)
+    print(idamax_res)
+
+    var icamax_res = cblas.icamax(n, xc32, 1)
+    print(icamax_res)
+
+    var izamax_res = cblas.izamax(n, yc64, 1)
+    print(izamax_res)
+
+    cblas.sswap(n, x32, 1, y32, 1)
+    cblas.scopy(n, x32, 1, y32, 1)
+    cblas.saxpy(n, 2, x32, 1, y32, 1)
+    print(y32[2])
+
+    cblas.dswap(n, x64, 1, y64, 1)
+    cblas.dcopy(n, x64, 1, y64, 1)
+    cblas.daxpy(n, 2, x64, 1, y64, 1)
+    print(y64[2])
