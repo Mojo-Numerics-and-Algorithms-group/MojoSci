@@ -24,7 +24,7 @@ struct C32(Testable):
         return self.real != other.real or self.imaginary != other.imaginary
 
     fn __str__(self) -> String:
-        return str(self.real) + " " + str(self.imaginary)
+        return str(self.real) + " + " + str(self.imaginary) + "i"
 
 
 @value
@@ -43,7 +43,7 @@ struct C64(Testable):
         return self.real != other.real or self.imaginary != other.imaginary
 
     fn __str__(self) -> String:
-        return str(self.real) + " " + str(self.imaginary)
+        return str(self.real) + " + " + str(self.imaginary) + "i"
 
 
 alias PF32 = UnsafePointer[F32]
